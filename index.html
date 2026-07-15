@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palette Creator by darya.acryllove</title>
+<meta name="description" content="Palette Creator — конструктор разлиновки для выкраски акриловых маркеров: ленточки, наборы, печать и обмен палитрами.">
+<meta property="og:title" content="Palette Creator by darya.acryllove">
+<meta property="og:description" content="Конструктор разлиновки для выкраски акриловых маркеров">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Bad+Script&family=Caveat:wght@400;700&family=Comfortaa:wght@400;700&family=Cormorant:wght@400;700&family=Dancing+Script:wght@400;700&family=Great+Vibes&family=Inter:wght@400;700&family=Jost:wght@400;700&family=Lora:wght@400;700&family=Manrope:wght@400;700&family=Marck+Script&family=Montserrat:wght@400;500;700&family=Neucha&family=Nunito:wght@400;700&family=Pacifico&family=Playfair+Display:wght@400;700&family=Rubik:wght@400;700&family=Unbounded:wght@400;700&display=swap">
+<style>
+  :root{
+    --bg:#f5f5f7; --panel:#ffffff; --panel2:#f2f2f7; --line:#e5e5ea; --line2:#d2d2d7;
+    --text:#1d1d1f; --muted:#86868b; --accent:#0071e3; --accent-h:#0077ed;
+    --danger:#ff3b30; --radius:14px;
+    --shadow:0 1px 3px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.05);
+  }
+  body[data-theme=dark]{
+    --bg:#161617; --panel:#1d1d1f; --panel2:#2c2c2e; --line:#3a3a3c; --line2:#48484a;
+    --text:#f5f5f7; --muted:#98989d; --accent:#0a84ff; --accent-h:#3395ff;
+    --danger:#ff453a;
+    --shadow:0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg);color:var(--text);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex;flex-direction:column;height:100vh;overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  header{
+    display:flex;align-items:center;gap:12px;padding:12px 20px;
+    background:var(--panel);border-bottom:1px solid var(--line);flex:0 0 auto;
+  }
+  header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.2px}
+  header .byline{
+    color:var(--muted);font-size:12px;text-decoration:none;font-style:italic;
+    font-family:Caveat,cursive;font-size:16px;transition:color .2s;
+  }
+  header .byline:hover{color:var(--accent)}
+  header .ig{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:30px;height:30px;border-radius:9px;color:var(--muted);transition:.2s;
+  }
+  header .ig:hover{
+    color:#fff;transform:scale(1.08);
+    background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);
+  }
+  header .spacer{flex:1}
+  .layout{flex:1;display:flex;min-height:0}
+  .sidebar{
+    width:330px;flex:0 0 330px;background:var(--panel);border-right:1px solid var(--line);
+    overflow-y:auto;padding:16px;
+  }
+  .main{flex:1;overflow:auto;background:var(--bg);padding:24px;display:flex;justify-content:center;align-items:flex-start}
+
+  /* segmented tabs */
+  .tabs{display:flex;background:var(--panel2);border-radius:10px;padding:3px;margin-bottom:16px}
+  .tabs button{
+    flex:1;padding:7px 4px;border:none;background:transparent;border-radius:8px;
+    color:var(--muted);cursor:pointer;font-size:13px;font-weight:600;transition:.15s;
+  }
+  .tabs button.active{background:var(--panel);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+  body[data-theme=dark] .tabs button.active{background:#48484a}
+
+  .card{background:var(--panel2);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+  .card h3{margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:-.1px}
+  .field{margin-bottom:10px}
+  .field:last-child{margin-bottom:0}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .row{display:flex;gap:8px}
+  .row>*{flex:1}
+  input,select,textarea,button{font-family:inherit;font-size:13px}
+  input[type=text],input[type=number],select,textarea{
+    width:100%;padding:8px 10px;background:var(--panel);border:1px solid var(--line);
+    color:var(--text);border-radius:10px;outline:none;appearance:none;-webkit-appearance:none;
+  }
+  select{background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="%2386868b" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>');background-repeat:no-repeat;background-position:right 10px center;padding-right:26px}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+  input[type=color]{width:100%;height:34px;padding:2px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+  /* Apple-style sliders */
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:22px;
+    background:transparent;margin:0;--fill:50%;
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:4px;border-radius:2px;
+    background:linear-gradient(to right,var(--accent) var(--fill),var(--line2) var(--fill));
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;
+    background:#fff;margin-top:-7px;cursor:pointer;
+    box-shadow:0 0 1px rgba(0,0,0,.15), 0 1px 4px rgba(0,0,0,.3);
+    border:none;
+  }
+  input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line2)}
+  input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--accent)}
+  input[type=range]::-moz-range-thumb{
+    width:18px;height:18px;border-radius:50%;background:#fff;border:none;cursor:pointer;
+    box-shadow:0 0 1px rgba(0,0,0,.15), 0 1px 4px rgba(0,0,0,.3);
+  }
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:8px 14px;border-radius:999px;border:1px solid var(--line2);
+    background:var(--panel);color:var(--text);cursor:pointer;font-weight:600;transition:.15s;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:var(--accent-h);color:#fff}
+  .btn.danger{color:var(--danger);border-color:transparent;background:transparent;padding:6px}
+  .btn.ghost{background:transparent}
+  .btn.small{padding:5px 10px;font-size:12px}
+  .btn.wide{width:100%;border-radius:10px}
+  .rangeval{font-size:12px;color:var(--muted);float:right}
+  .toggle{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;user-select:none;font-size:13px}
+  .toggle input{width:16px;height:16px;accent-color:var(--accent)}
+
+  /* B / I chips */
+  .chips{display:flex;gap:6px}
+  .chip{
+    width:34px;height:30px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel);color:var(--muted);cursor:pointer;font-weight:700;
+  }
+  .chip.i{font-style:italic;font-weight:400;font-family:Georgia,serif}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  /* marker list */
+  .mk-add{display:flex;gap:6px;margin-bottom:10px}
+  .mk-add input{flex:1;min-width:60px}
+  .mk-add input.code{flex:0 0 74px}
+  .mk-add input.color{flex:0 0 40px;padding:2px}
+  .mklist{display:flex;flex-direction:column;gap:6px}
+  .mkitem{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--panel2);border-radius:10px}
+  .mkitem .sw{width:20px;height:20px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(0,0,0,.12)}
+  .mkitem .code{font-weight:600;font-size:12px;min-width:52px;cursor:text;border-radius:6px;padding:2px 4px}
+  .mkitem .name{color:var(--muted);font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:text;border-radius:6px;padding:2px 4px}
+  .mkitem .code:hover,.mkitem .name:hover{background:var(--panel);box-shadow:inset 0 0 0 1px var(--line)}
+  .mkitem input.edit{padding:2px 6px;font-size:12px;border-radius:6px;width:100%;min-width:40px}
+  .cell .c-code,.cell .c-name{cursor:text}
+  .cell .c-code:hover,.cell .c-name:hover{outline:1.5px dashed var(--accent);outline-offset:2px;border-radius:3px}
+  .cell [contenteditable=true]{outline:1.5px solid var(--accent);outline-offset:2px;border-radius:3px;min-width:10px}
+  .mkitem .grip{cursor:grab;color:var(--muted);opacity:.5}
+  .mkitem.drag{opacity:.4}
+  .count{color:var(--muted);font-size:12px;font-weight:400;margin-left:4px}
+
+  /* sets */
+  .setitem{padding:12px;background:var(--panel2);border-radius:var(--radius);margin-bottom:8px}
+  .setitem .top{display:flex;align-items:center;gap:8px}
+  .setitem .nm{font-weight:600;flex:1}
+  .setitem .meta{color:var(--muted);font-size:11px;margin-top:2px}
+  .setitem .acts{display:flex;gap:6px;margin-top:10px}
+
+  .hint{color:var(--muted);font-size:11px;margin-top:6px;line-height:1.45}
+
+  /* preview sheet */
+  .sheet{background:#fff;color:#111;box-shadow:var(--shadow);border-radius:2px}
+  .sheet-wrap{transform-origin:top center}
+  .grid{display:grid;align-content:start;justify-content:start}
+  .cell{display:flex;align-items:center;gap:8px;padding:6px 10px;overflow:hidden}
+  .cell .spots{display:flex;gap:6px;align-items:center;flex:0 0 auto}
+  .cell .txt{flex:1;min-width:0}
+  .cell .c-name{color:#777}
+  .cell .ring{flex:0 0 auto}
+  .empty-note{color:#999;text-align:center;padding:40px;font-size:13px}
+
+  .toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .zoomctl{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--panel);border:1px solid var(--line);color:var(--text);
+    padding:10px 18px;border-radius:999px;box-shadow:var(--shadow);
+    opacity:0;transition:.25s;pointer-events:none;z-index:50;font-weight:600;font-size:13px;
+  }
+  .toast.show{opacity:1;bottom:30px}
+
+  /* modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:40;backdrop-filter:blur(2px)}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--panel);border-radius:18px;padding:20px;width:520px;max-width:92vw;box-shadow:var(--shadow)}
+  .modal h3{margin:0 0 10px;font-size:16px}
+  .modal textarea{height:120px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+  .modal .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+
+  /* animations */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+  .tabpane{animation:fadeUp .28s ease}
+  .mkitem{animation:fadeUp .22s ease}
+  .setitem{animation:fadeUp .22s ease}
+  .modal{animation:pop .22s ease}
+  .sheet{animation:fadeUp .35s ease}
+  .btn{transition:border-color .18s,color .18s,background .18s,transform .12s}
+  .btn:active{transform:scale(.96)}
+  .chip{transition:background .18s,color .18s,border-color .18s,transform .12s}
+  .chip:active{transform:scale(.92)}
+  .tabs button{transition:background .2s,color .2s,box-shadow .2s}
+  .mkitem{transition:background .18s}
+  .mkitem:hover{background:var(--line)}
+  input[type=range]::-webkit-slider-thumb{transition:transform .15s}
+  input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15)}
+  .card{transition:box-shadow .25s}
+  .card:hover{box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  body[data-theme=dark] .card:hover{box-shadow:0 2px 12px rgba(0,0,0,.35)}
+
+  @media print{
+    body{display:block;height:auto;overflow:visible;background:#fff}
+    header,.sidebar,.toolbar,.toast,.modal-bg{display:none!important}
+    .main{padding:0;display:block;overflow:visible;background:#fff}
+    .sheet{box-shadow:none;border-radius:0}
+    .sheet-wrap{transform:none!important}
+  }
+</style>
+
+</head>
+<body>
+<header>
+  <h1>🎨 Palette Creator</h1>
+  <a class="byline" href="https://www.instagram.com/darya.acryllove/" target="_blank" rel="noopener">by darya.acryllove</a>
+  <a class="ig" href="https://www.instagram.com/darya.acryllove/" target="_blank" rel="noopener" title="Instagram">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5.5"/>
+      <circle cx="12" cy="12" r="4.5"/>
+      <circle cx="17.6" cy="6.4" r="1.3" fill="currentColor" stroke="none"/>
+    </svg>
+  </a>
+  <span class="spacer"></span>
+  <button class="btn small ghost" id="btnTheme" title="Тема">🌙</button>
+  <button class="btn small" id="btnShare">Поделиться</button>
+  <button class="btn small" id="btnExport">JSON</button>
+  <button class="btn small" id="btnImport">Импорт</button>
+  <button class="btn small primary" id="btnPrint">Печать</button>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="tabs">
+      <button data-tab="markers" class="active">Маркеры</button>
+      <button data-tab="sets">Наборы</button>
+      <button data-tab="design">Дизайн</button>
+    </div>
+
+    <!-- MARKERS -->
+    <div class="tabpane" data-pane="markers">
+      <div class="card">
+        <h3>Добавить маркер</h3>
+        <div class="mk-add">
+          <input type="text" class="code" id="addCode" placeholder="Код">
+          <input type="text" id="addName" placeholder="Название">
+        </div>
+        <button class="btn primary wide" id="btnAdd">Добавить</button>
+        <div class="hint">Enter — тоже добавляет. Название остаётся — удобно набивать серию кодов подряд.</div>
+      </div>
+      <div class="card">
+        <h3>Добавить набор маркеров</h3>
+        <div class="field">
+          <input type="text" id="bulkName" placeholder="Название для всех (напр. Languo)">
+        </div>
+        <div class="field">
+          <textarea id="bulkCodes" rows="3" placeholder="Коды: B701, B702, G 202 или диапазон B701-750" style="resize:vertical"></textarea>
+        </div>
+        <button class="btn primary wide" id="btnBulk">Добавить все</button>
+        <div class="hint" id="bulkHint">Разделители: запятая или новая строка (коды с пробелами вроде «G 202» не разрезаются). Диапазоны: <b>701-750</b>, <b>B701-750</b>, <b>001-050</b> (нули сохраняются).</div>
+      </div>
+      <div class="card">
+        <h3>Список <span class="count" id="mkCount"></span>
+          <button class="btn danger small" id="btnClearMarkers" style="float:right">очистить</button>
+        </h3>
+        <div class="mklist" id="mklist"></div>
+      </div>
+    </div>
+
+    <!-- SETS -->
+    <div class="tabpane" data-pane="sets" style="display:none">
+      <div class="card">
+        <h3>Сохранить набор</h3>
+        <div class="field">
+          <input type="text" id="setName" placeholder="Производитель (напр. Grasp)">
+        </div>
+        <button class="btn primary wide" id="btnSaveSet">Сохранить текущий список</button>
+        <div class="hint">«Применить» — заменить список, «＋» — дописать к текущему.</div>
+      </div>
+      <div class="card">
+        <h3>Мои наборы <span class="count" id="setCount"></span></h3>
+        <div id="setlist"></div>
+      </div>
+    </div>
+
+    <!-- DESIGN -->
+    <div class="tabpane" data-pane="design" style="display:none">
+      <div class="card">
+        <h3>Лист</h3>
+        <div class="row">
+          <div class="field"><label>Формат</label>
+            <select id="dPaper">
+              <option value="A4">A4</option><option value="A5">A5</option><option value="Letter">Letter</option>
+            </select></div>
+          <div class="field"><label>Ориентация</label>
+            <select id="dOrient">
+              <option value="portrait">Книжная</option><option value="landscape">Альбомная</option>
+            </select></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Колонок <span class="rangeval" id="vCols"></span></label>
+            <input type="range" id="dCols" min="1" max="6" step="1"></div>
+          <div class="field"><label>Поля <span class="rangeval" id="vPad"></span></label>
+            <input type="range" id="dPad" min="0" max="30" step="1"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Ленточка</h3>
+        <div class="row">
+          <div class="field"><label>Высота <span class="rangeval" id="vRow"></span></label>
+            <input type="range" id="dRow" min="8" max="60" step="1"></div>
+          <div class="field"><label>Ширина <span class="rangeval" id="vStripW"></span></label>
+            <input type="range" id="dStripW" min="0" max="140" step="5"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Зазор <span class="rangeval" id="vGap"></span></label>
+            <input type="range" id="dGap" min="0" max="10" step="1"></div>
+          <div class="field"><label>Углы <span class="rangeval" id="vCorner"></span></label>
+            <input type="range" id="dCorner" min="0" max="12" step="1"></div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="dBorder"> Рамка</label>
+      </div>
+
+      <div class="card">
+        <h3>Текст</h3>
+        <div class="field"><label>Шрифт</label>
+          <select id="dFont">
+            <optgroup label="Современные">
+              <option value="Montserrat, Arial, sans-serif" style="font-family:Montserrat">Montserrat</option>
+              <option value="Inter, Arial, sans-serif" style="font-family:Inter">Inter</option>
+              <option value="Manrope, Arial, sans-serif" style="font-family:Manrope">Manrope</option>
+              <option value="Rubik, Arial, sans-serif" style="font-family:Rubik">Rubik</option>
+              <option value="Jost, Arial, sans-serif" style="font-family:Jost">Jost</option>
+              <option value="Nunito, Arial, sans-serif" style="font-family:Nunito">Nunito</option>
+              <option value="Comfortaa, Arial, sans-serif" style="font-family:Comfortaa">Comfortaa</option>
+              <option value="Unbounded, Arial, sans-serif" style="font-family:Unbounded">Unbounded</option>
+            </optgroup>
+            <optgroup label="Прописные и рукописные">
+              <option value="Caveat, cursive" style="font-family:Caveat">Caveat</option>
+              <option value="'Marck Script', cursive" style="font-family:'Marck Script'">Marck Script</option>
+              <option value="'Bad Script', cursive" style="font-family:'Bad Script'">Bad Script</option>
+              <option value="Neucha, cursive" style="font-family:Neucha">Neucha</option>
+              <option value="'Dancing Script', cursive" style="font-family:'Dancing Script'">Dancing Script</option>
+              <option value="'Great Vibes', cursive" style="font-family:'Great Vibes'">Great Vibes</option>
+              <option value="Pacifico, cursive" style="font-family:Pacifico">Pacifico</option>
+              <option value="'Amatic SC', cursive" style="font-family:'Amatic SC'">Amatic SC</option>
+            </optgroup>
+            <optgroup label="С засечками">
+              <option value="'Playfair Display', Georgia, serif" style="font-family:'Playfair Display'">Playfair Display</option>
+              <option value="Cormorant, Georgia, serif" style="font-family:Cormorant">Cormorant</option>
+              <option value="Lora, Georgia, serif" style="font-family:Lora">Lora</option>
+              <option value="Georgia, serif" style="font-family:Georgia">Georgia</option>
+              <option value="'Times New Roman', serif">Times</option>
+            </optgroup>
+            <optgroup label="Классические">
+              <option value="Arial, sans-serif">Arial</option>
+              <option value="Helvetica, Arial, sans-serif">Helvetica</option>
+              <option value="'Segoe UI', sans-serif">Segoe UI</option>
+              <option value="Verdana, sans-serif">Verdana</option>
+              <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
+              <option value="'Courier New', monospace">Courier</option>
+            </optgroup>
+          </select></div>
+        <div class="field"><label>Размер <span class="rangeval" id="vFs"></span></label>
+          <input type="range" id="dFs" min="6" max="18" step="1"></div>
+        <div class="row">
+          <div class="field"><label>Сдвиг кода <span class="rangeval" id="vCodeIndent"></span></label>
+            <input type="range" id="dCodeIndent" min="0" max="120" step="1"></div>
+          <div class="field"><label>Сдвиг названия <span class="rangeval" id="vNameIndent"></span></label>
+            <input type="range" id="dNameIndent" min="0" max="120" step="1"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Код</label>
+            <div class="chips">
+              <button class="chip" id="cCodeB" title="Жирный">B</button>
+              <button class="chip i" id="cCodeI" title="Курсив">I</button>
+            </div></div>
+          <div class="field"><label>Название</label>
+            <div class="chips">
+              <button class="chip" id="cNameB" title="Жирный">B</button>
+              <button class="chip i" id="cNameI" title="Курсив">I</button>
+            </div></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label class="toggle" style="margin:0"><input type="checkbox" id="dCode"> Код</label>
+          <label class="toggle" style="margin:0"><input type="checkbox" id="dNameShow"> Название</label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Кружки и кольцо</h3>
+        <div class="row">
+          <div class="field"><label>Кол-во <span class="rangeval" id="vSpots"></span></label>
+            <input type="range" id="dSpots" min="0" max="3" step="1"></div>
+          <div class="field"><label>Размер <span class="rangeval" id="vSpotSize"></span></label>
+            <input type="range" id="dSpotSize" min="4" max="20" step="1"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Форма</label>
+            <select id="dSpotShape">
+              <option value="circle">Круг</option><option value="square">Квадрат</option>
+            </select></div>
+          <div class="field"><label>Сдвиг <span class="rangeval" id="vSpotIndent"></span></label>
+            <input type="range" id="dSpotIndent" min="0" max="60" step="1"></div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="dRing"> Отверстие под кольцо</label>
+        <div class="field"><label>Диаметр отверстия <span class="rangeval" id="vRingSize"></span></label>
+          <input type="range" id="dRingSize" min="2" max="8" step="1"></div>
+      </div>
+
+      <div class="card">
+        <h3>Цвета</h3>
+        <div class="row">
+          <div class="field"><label>Линии</label><input type="color" id="dLineColor"></div>
+          <div class="field"><label>Текст</label><input type="color" id="dTextColor"></div>
+        </div>
+        <button class="btn ghost small wide" id="btnResetDesign" style="margin-top:8px">↺ Сбросить дизайн</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div>
+      <div class="toolbar">
+        <div class="zoomctl">
+          <button class="btn small" id="zoomOut">−</button>
+          <span id="zoomVal">70%</span>
+          <button class="btn small" id="zoomIn">＋</button>
+          <button class="btn small" id="zoomFit">по ширине</button>
+        </div>
+        <span class="zoomctl" id="pageInfo"></span>
+      </div>
+      <div class="sheet-wrap" id="sheetWrap">
+        <div class="sheet" id="sheet"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle">Импорт</h3>
+    <p class="hint" id="modalHint" style="margin-top:0"></p>
+    <textarea id="modalText" spellcheck="false"></textarea>
+    <div class="foot">
+      <button class="btn" id="modalCancel">Закрыть</button>
+      <button class="btn primary" id="modalOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2,9);
+
+const PAPER = { A4:{w:210,h:297}, A5:{w:148,h:210}, Letter:{w:216,h:279} };
+
+/* ---------- (не используется) палитры производителей [код, название, hex] ---------- */
+const MM = 3.7795; // px per mm at 96dpi
+
+const DEFAULT_DESIGN = {
+  paper:"A4", orient:"portrait", cols:2, pad:10,
+  rowH:16, stripW:0, gap:0, showCode:true, showName:true, border:true, corner:0,
+  font:"Montserrat, Arial, sans-serif", fs:10,
+  codeBold:false, codeItalic:false, nameBold:false, nameItalic:false,
+  codeIndent:14, nameIndent:34,
+  spotShape:"circle", spots:1, spotSize:7, spotIndent:3,
+  ring:true, ringSize:5,
+  lineColor:"#d9d9d9", textColor:"#333333"
+};
+
+let state = {
+  markers: [],
+  sets: [],
+  design: {...DEFAULT_DESIGN},
+  zoom: 0.7
+};
+
+/* ---------- persistence ---------- */
+const LS = "palette_app_v1";
+function save(){
+  localStorage.setItem(LS, JSON.stringify({markers:state.markers, sets:state.sets, design:state.design}));
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(LS);
+    if(raw){
+      const d = JSON.parse(raw);
+      state.markers = d.markers||[];
+      state.sets = d.sets||[];
+      const dd = d.design||{};
+      // миграция: сохранения без раздельных сдвигов кода/названия получают их
+      // из старого общего сдвига текста (textIndent)
+      if(dd.codeIndent===undefined){
+        dd.codeIndent = Math.max(10, dd.textIndent||14);
+        dd.nameIndent = dd.codeIndent+20;
+      }
+      state.design = {...DEFAULT_DESIGN, ...dd};
+    }
+  }catch(e){}
+}
+
+/* ---------- theme ---------- */
+function applyTheme(t){
+  document.body.dataset.theme = t;
+  $("#btnTheme").textContent = t==="dark" ? "☀️" : "🌙";
+  localStorage.setItem("palette_theme", t);
+}
+function initTheme(){
+  const saved = localStorage.getItem("palette_theme");
+  const prefers = matchMedia("(prefers-color-scheme: dark)").matches ? "dark":"light";
+  applyTheme(saved || prefers);
+}
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg){
+  const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2200);
+}
+
+/* ---------- markers ---------- */
+function addMarker(code,name){
+  code=(code||"").trim(); name=(name||"").trim();
+  if(!code && !name){ toast("Введите код или название"); return; }
+  state.markers.push({id:uid(),code,name});
+  save(); renderMarkers(); renderSheet();
+}
+function removeMarker(id){
+  state.markers = state.markers.filter(m=>m.id!==id);
+  save(); renderMarkers(); renderSheet();
+}
+function renderMarkers(){
+  const box=$("#mklist"); box.innerHTML="";
+  $("#mkCount").textContent = state.markers.length ? `(${state.markers.length})` : "";
+  if(!state.markers.length){
+    box.innerHTML='<div class="hint">Пусто. Добавьте маркеры вручную или примените набор.</div>';
+    return;
+  }
+  state.markers.forEach((m,i)=>{
+    const el=document.createElement("div");
+    el.className="mkitem"; el.draggable=true; el.dataset.i=i;
+    el.innerHTML=`<span class="grip">⋮⋮</span>
+      <span class="code" title="Нажмите, чтобы изменить">${escapeHtml(m.code)||"—"}</span>
+      <span class="name" title="Нажмите, чтобы изменить">${escapeHtml(m.name)||"—"}</span>
+      <button class="btn danger small" title="Удалить">✕</button>`;
+    el.querySelector("button").onclick=()=>removeMarker(m.id);
+    // клик по коду/названию — инлайн-редактирование
+    [["code","code"],["name","name"]].forEach(([cls,field])=>{
+      const span=el.querySelector("."+cls);
+      span.onclick=()=>{
+        el.draggable=false;
+        const inp=document.createElement("input");
+        inp.type="text"; inp.className="edit"; inp.value=m[field]||"";
+        span.replaceWith(inp);
+        inp.focus(); inp.select();
+        let done=false;
+        const commit=(cancel)=>{
+          if(done) return; done=true;
+          if(!cancel){ m[field]=inp.value.trim(); save(); }
+          renderMarkers(); renderSheet();
+        };
+        inp.onblur=()=>commit(false);
+        inp.onkeydown=ev=>{
+          if(ev.key==="Enter") commit(false);
+          else if(ev.key==="Escape") commit(true);
+        };
+      };
+    });
+    el.addEventListener("dragstart",e=>{el.classList.add("drag");e.dataTransfer.setData("text",i)});
+    el.addEventListener("dragend",()=>el.classList.remove("drag"));
+    el.addEventListener("dragover",e=>e.preventDefault());
+    el.addEventListener("drop",e=>{
+      e.preventDefault();
+      const from=+e.dataTransfer.getData("text"), to=i;
+      const arr=state.markers; const [it]=arr.splice(from,1); arr.splice(to,0,it);
+      save(); renderMarkers(); renderSheet();
+    });
+    box.appendChild(el);
+  });
+}
+
+/* ---------- sets ---------- */
+function saveSet(){
+  const name=$("#setName").value.trim();
+  if(!name){ toast("Название набора?"); return; }
+  if(!state.markers.length){ toast("Список маркеров пуст"); return; }
+  state.sets.push({id:uid(),name,markers:JSON.parse(JSON.stringify(state.markers))});
+  $("#setName").value="";
+  save(); renderSets(); toast("Набор сохранён");
+}
+function applySet(id,append){
+  const s=state.sets.find(x=>x.id===id); if(!s) return;
+  const copy=JSON.parse(JSON.stringify(s.markers)).map(m=>({...m,id:uid()}));
+  state.markers = append ? state.markers.concat(copy) : copy;
+  save(); renderMarkers(); renderSheet();
+  toast(append?"Добавлено в список":"Набор применён");
+}
+function deleteSet(id){
+  state.sets=state.sets.filter(x=>x.id!==id);
+  save(); renderSets();
+}
+function renderSets(){
+  const box=$("#setlist"); box.innerHTML="";
+  $("#setCount").textContent = state.sets.length ? `(${state.sets.length})` : "";
+  if(!state.sets.length){ box.innerHTML='<div class="hint">Наборов пока нет.</div>'; return; }
+  state.sets.forEach(s=>{
+    const el=document.createElement("div");
+    el.className="setitem";
+    el.innerHTML=`<div class="top"><span class="nm">${escapeHtml(s.name)}</span>
+        <button class="btn danger small">✕</button></div>
+      <div class="meta">${s.markers.length} маркеров</div>
+      <div class="acts">
+        <button class="btn small primary" data-a="apply">Применить</button>
+        <button class="btn small" data-a="append">＋ Добавить</button>
+      </div>`;
+    el.querySelector(".btn.danger").onclick=()=>deleteSet(s.id);
+    el.querySelector('[data-a=apply]').onclick=()=>applySet(s.id,false);
+    el.querySelector('[data-a=append]').onclick=()=>applySet(s.id,true);
+    box.appendChild(el);
+  });
+}
+
+/* ---------- design bindings ---------- */
+const CHIPS = [["#cCodeB","codeBold"],["#cCodeI","codeItalic"],["#cNameB","nameBold"],["#cNameI","nameItalic"]];
+function bindDesign(){
+  const d=state.design;
+  const set=(id,val)=>{const e=$(id); if(e){ if(e.type==="checkbox") e.checked=val; else e.value=val; }};
+  set("#dPaper",d.paper); set("#dOrient",d.orient); set("#dCols",d.cols); set("#dPad",d.pad);
+  set("#dRow",d.rowH); set("#dStripW",d.stripW); set("#dGap",d.gap);
+  set("#dCode",d.showCode); set("#dNameShow",d.showName);
+  set("#dBorder",d.border); set("#dCorner",d.corner); set("#dFont",d.font); set("#dFs",d.fs);
+  set("#dSpotShape",d.spotShape); set("#dSpots",d.spots);
+  set("#dSpotSize",d.spotSize); set("#dSpotIndent",d.spotIndent);
+  set("#dCodeIndent",d.codeIndent); set("#dNameIndent",d.nameIndent);
+  set("#dRing",d.ring); set("#dRingSize",d.ringSize);
+  set("#dLineColor",d.lineColor); set("#dTextColor",d.textColor);
+  CHIPS.forEach(([sel,key])=>$(sel).classList.toggle("on",!!d[key]));
+  updateRangeLabels();
+}
+function readDesign(){
+  const d=state.design;
+  const g=(id)=>$(id);
+  d.paper=g("#dPaper").value; d.orient=g("#dOrient").value;
+  d.cols=+g("#dCols").value; d.pad=+g("#dPad").value;
+  d.rowH=+g("#dRow").value; d.stripW=+g("#dStripW").value; d.gap=+g("#dGap").value;
+  d.showCode=g("#dCode").checked; d.showName=g("#dNameShow").checked;
+  d.border=g("#dBorder").checked; d.corner=+g("#dCorner").value; d.font=g("#dFont").value; d.fs=+g("#dFs").value;
+  d.spotShape=g("#dSpotShape").value; d.spots=+g("#dSpots").value;
+  d.spotSize=+g("#dSpotSize").value; d.spotIndent=+g("#dSpotIndent").value;
+  d.codeIndent=+g("#dCodeIndent").value; d.nameIndent=+g("#dNameIndent").value;
+  d.ring=g("#dRing").checked; d.ringSize=+g("#dRingSize").value;
+  d.lineColor=g("#dLineColor").value; d.textColor=g("#dTextColor").value;
+  updateRangeLabels(); save(); renderSheet();
+}
+function updateSliderFills(){
+  document.querySelectorAll('input[type=range]').forEach(el=>{
+    const min=+el.min||0, max=+el.max||100, v=+el.value;
+    el.style.setProperty('--fill', ((v-min)/(max-min)*100)+'%');
+  });
+}
+function updateRangeLabels(){
+  updateSliderFills();
+  const d=state.design;
+  $("#vCols").textContent=d.cols; $("#vPad").textContent=d.pad+" мм";
+  $("#vRow").textContent=d.rowH+" мм";
+  $("#vStripW").textContent=d.stripW>0?d.stripW+" мм":"авто";
+  $("#vGap").textContent=d.gap+" мм";
+  $("#vCorner").textContent=d.corner+" мм";
+  $("#vFs").textContent=d.fs+" pt"; $("#vSpots").textContent=d.spots;
+  $("#vCodeIndent").textContent=d.codeIndent+" мм";
+  $("#vNameIndent").textContent=d.nameIndent+" мм";
+  $("#vSpotIndent").textContent=d.spotIndent+" мм";
+  $("#vSpotSize").textContent=d.spotSize+" мм"; $("#vRingSize").textContent=d.ringSize+" мм";
+}
+
+/* ---------- render sheet ---------- */
+function spotHtml(){
+  const d=state.design;
+  const sz=d.spotSize*MM;
+  const round = d.spotShape==="circle" ? "50%" : (d.corner*MM*0.4+2)+"px";
+  return `<span class="spot" style="width:${sz}px;height:${sz}px;
+    border-radius:${round};background:#fff;border:1px dashed ${d.lineColor};display:inline-block"></span>`;
+}
+function spotsBlock(){
+  const d=state.design;
+  if(d.spots<=0) return "";
+  let s=""; for(let i=0;i<d.spots;i++) s+=spotHtml();
+  return `<span class="spots" style="position:absolute;left:${d.spotIndent*MM}px;top:50%;transform:translateY(-50%)">${s}</span>`;
+}
+function ringHtml(){
+  const d=state.design;
+  if(!d.ring) return "";
+  const sz=d.ringSize*MM;
+  return `<span class="ring" title="отверстие под кольцо" style="position:absolute;right:${3*MM}px;top:50%;transform:translateY(-50%);
+    width:${sz}px;height:${sz}px;border-radius:50%;
+    border:1px dashed ${d.lineColor};background:#fff;display:inline-block"></span>`;
+}
+function fontStyle(bold,italic){
+  return `font-weight:${bold?700:400};font-style:${italic?"italic":"normal"}`;
+}
+function cellHtml(m, collapse){
+  const d=state.design;
+  const spots = spotsBlock();
+  const anchor = `position:absolute;top:50%;transform:translateY(-50%);white-space:nowrap`;
+  let txt="";
+  if(d.showCode) txt+=`<span class="c-code" style="${anchor};left:${d.codeIndent*MM}px;color:${d.textColor};${fontStyle(d.codeBold,d.codeItalic)}">${escapeHtml(m.code||"")}</span>`;
+  if(d.showName) txt+=`<span class="c-name" style="${anchor};left:${d.nameIndent*MM}px;${fontStyle(d.nameBold,d.nameItalic)}">${escapeHtml(m.name||"")}</span>`;
+  // схлопывание границ: соседние ленточки делят одну линию (без двойной толщины)
+  let border;
+  if(!d.border) border="border:1px solid transparent";
+  else if(collapse) border=`border-right:1px solid ${d.lineColor};border-bottom:1px solid ${d.lineColor}`;
+  else border=`border:1px solid ${d.lineColor}`;
+  return `<div class="cell" style="${border};border-radius:${d.corner*MM}px;position:relative;
+      height:${d.rowH*MM}px;font-family:${d.font};font-size:${d.fs}pt;color:${d.textColor}">
+      ${spots}${txt}${ringHtml()}
+    </div>`;
+}
+function renderSheet(){
+  const d=state.design;
+  const p=PAPER[d.paper];
+  let w=p.w, h=p.h;
+  if(d.orient==="landscape"){ [w,h]=[h,w]; }
+  const sheet=$("#sheet");
+  sheet.style.width=(w*MM)+"px";
+  sheet.style.minHeight=(h*MM)+"px";
+  sheet.style.padding=(d.pad*MM)+"px";
+
+  if(!state.markers.length){
+    sheet.innerHTML='<div class="empty-note">Добавьте маркеры — здесь появится разлиновка.</div>';
+  }else{
+    const collapse = d.border && d.gap===0 && d.corner===0;
+    const grid=document.createElement("div");
+    grid.className="grid";
+    grid.style.gridTemplateColumns = d.stripW>0
+      ? `repeat(${d.cols}, ${d.stripW*MM}px)`
+      : `repeat(${d.cols}, 1fr)`;
+    grid.style.width = d.stripW>0 ? "fit-content" : "100%";
+    grid.style.gridAutoRows = (d.rowH*MM)+"px";
+    grid.style.gap = (d.gap*MM)+"px";
+    if(collapse){
+      grid.style.borderTop=`1px solid ${d.lineColor}`;
+      grid.style.borderLeft=`1px solid ${d.lineColor}`;
+    }else{
+      grid.style.border="none";
+    }
+    grid.innerHTML = state.markers.map(m=>cellHtml(m,collapse)).join("");
+    sheet.innerHTML=""; sheet.appendChild(grid);
+  }
+  const rowPx=(d.rowH+d.gap)*MM+2;
+  const perPage=Math.max(1, Math.floor((h-2*d.pad)*MM/rowPx))*d.cols;
+  const pages=Math.max(1, Math.ceil(state.markers.length/perPage));
+  $("#pageInfo").textContent = state.markers.length ? `≈ ${pages} стр. · ${perPage} на стр.` : "";
+  applyZoom();
+}
+
+/* ---------- zoom ---------- */
+function applyZoom(){
+  $("#sheetWrap").style.transform=`scale(${state.zoom})`;
+  $("#zoomVal").textContent=Math.round(state.zoom*100)+"%";
+}
+function fitWidth(){
+  const d=state.design; const p=PAPER[d.paper];
+  let w=(d.orient==="landscape"?p.h:p.w)*MM;
+  const avail=$(".main").clientWidth-60;
+  state.zoom=Math.min(1.2, Math.max(0.2, avail/w));
+  applyZoom();
+}
+
+/* ---------- share / export / import ---------- */
+function payload(){
+  return {v:1, markers:state.markers, sets:state.sets, design:state.design};
+}
+function encodeShare(){
+  const json=JSON.stringify(payload());
+  return btoa(unescape(encodeURIComponent(json)));
+}
+function decodeShare(str){
+  return JSON.parse(decodeURIComponent(escape(atob(str))));
+}
+function makeShareLink(){
+  const base=location.href.split("#")[0];
+  return base+"#p="+encodeShare();
+}
+function importData(obj,{merge}={}){
+  if(!obj) return;
+  if(obj.design) state.design={...DEFAULT_DESIGN,...obj.design};
+  if(merge){
+    if(obj.markers) state.markers=state.markers.concat(obj.markers.map(m=>({...m,id:uid()})));
+    if(obj.sets) state.sets=state.sets.concat(obj.sets.map(s=>({...s,id:uid()})));
+  }else{
+    if(obj.markers) state.markers=obj.markers;
+    if(obj.sets) state.sets=obj.sets;
+  }
+  save(); bindDesign(); renderMarkers(); renderSets(); renderSheet();
+}
+
+/* ---------- modal ---------- */
+function modal({title,hint,value,readonly,onOk}){
+  $("#modalTitle").textContent=title;
+  $("#modalHint").textContent=hint||"";
+  const ta=$("#modalText"); ta.value=value||""; ta.readOnly=!!readonly;
+  $("#modalBg").classList.add("show");
+  if(readonly){ ta.focus(); ta.select(); }
+  $("#modalOk").onclick=()=>{ if(onOk) onOk(ta.value); $("#modalBg").classList.remove("show"); };
+  $("#modalOk").style.display = onOk ? "" : "none";
+}
+
+/* ---------- util ---------- */
+function escapeHtml(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+/* ---------- events ---------- */
+function initEvents(){
+  document.querySelectorAll(".tabs button").forEach(b=>{
+    b.onclick=()=>{
+      document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      document.querySelectorAll(".tabpane").forEach(p=>p.style.display="none");
+      $(`[data-pane=${b.dataset.tab}]`).style.display="";
+    };
+  });
+  $("#btnAdd").onclick=()=>{
+    addMarker($("#addCode").value,$("#addName").value);
+    $("#addCode").value=""; $("#addCode").focus(); // название остаётся для серии
+  };
+
+  // массовое добавление: одно название + много кодов (в т.ч. диапазоны B701-750)
+  const expandCodes=(text)=>{
+    const out=[];
+    text.split(/[\n,;]+/).map(s=>s.trim()).filter(Boolean).forEach(tok=>{
+      const m=tok.match(/^(.*?)(\d+)[-–—](?:\D*?)(\d+)$/);
+      if(m){
+        const [,prefix,a,b]=m;
+        let from=parseInt(a,10), to=parseInt(b,10);
+        if(to>=from && to-from<999){
+          const pad=a.length;
+          for(let i=from;i<=to;i++) out.push(prefix+String(i).padStart(pad,"0"));
+          return;
+        }
+      }
+      out.push(tok);
+    });
+    return out;
+  };
+  const bulkPreview=()=>{
+    const n=expandCodes($("#bulkCodes").value).length;
+    $("#bulkHint").innerHTML = n
+      ? `Будет добавлено: <b>${n}</b> шт.`
+      : `Разделители: запятая или новая строка (коды с пробелами вроде «G 202» не разрезаются). Диапазоны: <b>701-750</b>, <b>B701-750</b>, <b>001-050</b> (нули сохраняются).`;
+  };
+  $("#bulkCodes").addEventListener("input",bulkPreview);
+  $("#btnBulk").onclick=()=>{
+    const name=$("#bulkName").value.trim();
+    const codes=expandCodes($("#bulkCodes").value);
+    if(!codes.length){ toast("Введите коды"); return; }
+    codes.forEach(code=>state.markers.push({id:uid(),code,name}));
+    save(); renderMarkers(); renderSheet();
+    $("#bulkCodes").value=""; bulkPreview();
+    toast(`Добавлено ${codes.length} маркеров${name?" · "+name:""}`);
+  };
+  $("#addName").addEventListener("keydown",e=>{if(e.key==="Enter")$("#btnAdd").click();});
+  $("#addCode").addEventListener("keydown",e=>{if(e.key==="Enter")$("#addName").focus();});
+  $("#btnClearMarkers").onclick=()=>{ if(confirm("Очистить весь список маркеров?")){state.markers=[];save();renderMarkers();renderSheet();} };
+
+  $("#btnSaveSet").onclick=saveSet;
+
+  document.querySelectorAll(".tabpane[data-pane=design] input, .tabpane[data-pane=design] select")
+    .forEach(el=>el.addEventListener("input",readDesign));
+  CHIPS.forEach(([sel,key])=>{
+    $(sel).onclick=()=>{
+      state.design[key]=!state.design[key];
+      $(sel).classList.toggle("on",state.design[key]);
+      save(); renderSheet();
+    };
+  });
+  $("#btnResetDesign").onclick=()=>{ state.design={...DEFAULT_DESIGN}; bindDesign(); save(); renderSheet(); toast("Дизайн сброшен"); };
+
+  $("#zoomIn").onclick=()=>{state.zoom=Math.min(1.5,state.zoom+0.1);applyZoom();};
+  $("#zoomOut").onclick=()=>{state.zoom=Math.max(0.2,state.zoom-0.1);applyZoom();};
+  $("#zoomFit").onclick=fitWidth;
+
+  $("#btnTheme").onclick=()=>applyTheme(document.body.dataset.theme==="dark"?"light":"dark");
+  $("#btnPrint").onclick=()=>window.print();
+  $("#btnShare").onclick=()=>{
+    const link=makeShareLink();
+    if(link.length>16000){
+      toast("Слишком много данных для ссылки — используйте экспорт JSON");
+    }
+    navigator.clipboard?.writeText(link).then(()=>toast("Ссылка скопирована"),()=>{});
+    modal({title:"Поделиться",hint:"Ссылка содержит всю палитру и настройки. Отправьте её другу — откроется как есть. (Также скопирована в буфер.)",value:link,readonly:true});
+  };
+  $("#btnExport").onclick=()=>{
+    const data=JSON.stringify(payload(),null,2);
+    const blob=new Blob([data],{type:"application/json"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob); a.download="palette.json"; a.click();
+    modal({title:"Экспорт JSON",hint:"Файл palette.json скачан. Ниже — те же данные, можно скопировать.",value:data,readonly:true});
+  };
+  $("#btnImport").onclick=()=>{
+    modal({title:"Импорт",hint:"Вставьте JSON (из экспорта) или строку из ссылки после #p=. Текущие данные будут заменены.",value:"",onOk:(txt)=>{
+      txt=txt.trim(); if(!txt) return;
+      try{
+        let obj;
+        if(txt.startsWith("{")) obj=JSON.parse(txt);
+        else obj=decodeShare(txt.replace(/^#?p=/,""));
+        importData(obj);
+        toast("Импортировано");
+      }catch(e){ toast("Не удалось разобрать данные"); }
+    }});
+  };
+  // клик по тексту ленточки на листе — редактирование на месте
+  $("#sheet").addEventListener("click",e=>{
+    const t=e.target.closest(".c-code,.c-name");
+    if(!t || t.isContentEditable) return;
+    const cell=t.closest(".cell");
+    const idx=[...cell.parentNode.children].indexOf(cell);
+    const m=state.markers[idx]; if(!m) return;
+    const field=t.classList.contains("c-code")?"code":"name";
+    t.contentEditable="true";
+    t.focus();
+    const range=document.createRange(); range.selectNodeContents(t);
+    const sel=getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    let done=false;
+    const commit=(cancel)=>{
+      if(done) return; done=true;
+      if(!cancel){ m[field]=t.textContent.trim(); save(); }
+      renderMarkers(); renderSheet();
+    };
+    t.onblur=()=>commit(false);
+    t.onkeydown=ev=>{
+      if(ev.key==="Enter"){ ev.preventDefault(); commit(false); }
+      else if(ev.key==="Escape"){ commit(true); }
+    };
+  });
+
+  $("#modalCancel").onclick=()=>$("#modalBg").classList.remove("show");
+  $("#modalBg").onclick=e=>{ if(e.target===$("#modalBg")) $("#modalBg").classList.remove("show"); };
+}
+
+/* ---------- boot ---------- */
+function boot(){
+  initTheme();
+  load();
+  if(location.hash.startsWith("#p=")){
+    try{ importData(decodeShare(location.hash.slice(3))); toast("Палитра загружена из ссылки");
+      history.replaceState(null,"",location.pathname);
+    }catch(e){}
+  }
+  bindDesign();
+  initEvents();
+  renderMarkers(); renderSets(); renderSheet();
+  fitWidth();
+}
+boot();
+</script>
+</body>
+</html>
