@@ -180,6 +180,40 @@
   .modal textarea{height:120px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
   .modal .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 
+  /* mobile bottom nav (hidden on desktop) */
+  .mobile-nav{
+    display:none;position:fixed;left:0;right:0;bottom:0;z-index:30;
+    background:var(--panel);border-top:1px solid var(--line);
+    padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+  }
+  .mobile-nav button{
+    flex:1;border:none;background:transparent;color:var(--muted);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    font-size:11px;font-weight:600;padding:6px 2px;border-radius:10px;
+  }
+  .mobile-nav button .ico{font-size:20px;line-height:1}
+  .mobile-nav button.active{color:var(--accent)}
+
+  @media (max-width:800px){
+    body{height:100dvh}
+    header{padding:8px 10px;gap:8px;flex-wrap:wrap}
+    header h1{font-size:15px}
+    header .byline{font-size:14px}
+    .layout{flex-direction:column}
+    .sidebar{width:100%;flex:1;border-right:none;padding:12px;padding-bottom:86px;display:none}
+    .main{display:none;padding:12px 8px 86px}
+    body:not([data-mview=preview]) .sidebar{display:block}
+    body[data-mview=preview] .main{display:flex}
+    .tabs{display:none}
+    .mobile-nav{display:flex}
+    input[type=text],input[type=number],select,textarea{font-size:16px}
+    .btn{padding:9px 14px}
+    .btn.small{padding:7px 12px;font-size:13px}
+    .toolbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0;margin-bottom:8px}
+    .mkitem .code{min-width:64px}
+    .chip{width:40px;height:36px}
+  }
+
   /* animations */
   @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   @keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
@@ -187,7 +221,6 @@
   .mkitem{animation:fadeUp .22s ease}
   .setitem{animation:fadeUp .22s ease}
   .modal{animation:pop .22s ease}
-  .sheet{animation:fadeUp .35s ease}
   .btn{transition:border-color .18s,color .18s,background .18s,transform .12s}
   .btn:active{transform:scale(.96)}
   .chip{transition:background .18s,color .18s,border-color .18s,transform .12s}
@@ -203,7 +236,8 @@
 
   @media print{
     body{display:block;height:auto;overflow:visible;background:#fff}
-    header,.sidebar,.toolbar,.toast,.modal-bg{display:none!important}
+    header,.sidebar,.toolbar,.toast,.modal-bg,.mobile-nav{display:none!important}
+    .main{display:block!important}
     .main{padding:0;display:block;overflow:visible;background:#fff}
     .sheet{box-shadow:none;border-radius:0;width:auto!important;height:auto!important;margin:0!important;break-after:page}
     .sheet:last-child{break-after:auto}
@@ -401,8 +435,12 @@
             <input type="range" id="dSpotIndent" min="0" max="60" step="1"></div>
         </div>
         <label class="toggle"><input type="checkbox" id="dRing"> Отверстие под кольцо</label>
-        <div class="field"><label>Диаметр отверстия <span class="rangeval" id="vRingSize"></span></label>
-          <input type="range" id="dRingSize" min="2" max="8" step="1"></div>
+        <div class="row">
+          <div class="field"><label>Диаметр <span class="rangeval" id="vRingSize"></span></label>
+            <input type="range" id="dRingSize" min="2" max="8" step="1"></div>
+          <div class="field"><label>Сдвиг от края <span class="rangeval" id="vRingIndent"></span></label>
+            <input type="range" id="dRingIndent" min="0" max="60" step="1"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -431,6 +469,13 @@
     </div>
   </main>
 </div>
+
+<nav class="mobile-nav" id="mobileNav">
+  <button data-mtab="markers"><span class="ico">🖊️</span>Маркеры</button>
+  <button data-mtab="sets"><span class="ico">📚</span>Наборы</button>
+  <button data-mtab="design"><span class="ico">🎨</span>Дизайн</button>
+  <button data-mtab="preview"><span class="ico">👁️</span>Превью</button>
+</nav>
 
 <div class="toast" id="toast"></div>
 
@@ -463,7 +508,7 @@ const DEFAULT_DESIGN = {
   codeBold:false, codeItalic:false, nameBold:false, nameItalic:false,
   codeIndent:14, nameIndent:34,
   spotShape:"circle", spots:1, spotSize:7, spotIndent:3,
-  ring:true, ringSize:5,
+  ring:true, ringSize:5, ringIndent:3,
   lineColor:"#d9d9d9", textColor:"#333333"
 };
 
@@ -631,7 +676,7 @@ function bindDesign(){
   set("#dSpotShape",d.spotShape); set("#dSpots",d.spots);
   set("#dSpotSize",d.spotSize); set("#dSpotIndent",d.spotIndent);
   set("#dCodeIndent",d.codeIndent); set("#dNameIndent",d.nameIndent);
-  set("#dRing",d.ring); set("#dRingSize",d.ringSize);
+  set("#dRing",d.ring); set("#dRingSize",d.ringSize); set("#dRingIndent",d.ringIndent);
   set("#dLineColor",d.lineColor); set("#dTextColor",d.textColor);
   CHIPS.forEach(([sel,key])=>$(sel).classList.toggle("on",!!d[key]));
   updateRangeLabels();
@@ -647,7 +692,7 @@ function readDesign(){
   d.spotShape=g("#dSpotShape").value; d.spots=+g("#dSpots").value;
   d.spotSize=+g("#dSpotSize").value; d.spotIndent=+g("#dSpotIndent").value;
   d.codeIndent=+g("#dCodeIndent").value; d.nameIndent=+g("#dNameIndent").value;
-  d.ring=g("#dRing").checked; d.ringSize=+g("#dRingSize").value;
+  d.ring=g("#dRing").checked; d.ringSize=+g("#dRingSize").value; d.ringIndent=+g("#dRingIndent").value;
   d.lineColor=g("#dLineColor").value; d.textColor=g("#dTextColor").value;
   updateRangeLabels(); save(); renderSheet();
 }
@@ -670,6 +715,7 @@ function updateRangeLabels(){
   $("#vNameIndent").textContent=d.nameIndent+" мм";
   $("#vSpotIndent").textContent=d.spotIndent+" мм";
   $("#vSpotSize").textContent=d.spotSize+" мм"; $("#vRingSize").textContent=d.ringSize+" мм";
+  $("#vRingIndent").textContent=d.ringIndent+" мм";
 }
 
 /* ---------- render sheet ---------- */
@@ -690,7 +736,7 @@ function ringHtml(){
   const d=state.design;
   if(!d.ring) return "";
   const sz=d.ringSize*MM;
-  return `<span class="ring" title="отверстие под кольцо" style="position:absolute;right:${3*MM}px;top:50%;transform:translateY(-50%);
+  return `<span class="ring" title="отверстие под кольцо" style="position:absolute;right:${d.ringIndent*MM}px;top:50%;transform:translateY(-50%);
     width:${sz}px;height:${sz}px;border-radius:50%;
     border:1px dashed ${d.lineColor};background:#fff;display:inline-block"></span>`;
 }
@@ -815,6 +861,11 @@ function initEvents(){
       $(`[data-pane=${b.dataset.tab}]`).style.display="";
     };
   });
+
+  // мобильная навигация: Маркеры/Наборы/Дизайн — панель, Превью — лист
+  document.querySelectorAll("#mobileNav button").forEach(b=>{
+    b.onclick=()=>setMView(b.dataset.mtab);
+  });
   $("#btnAdd").onclick=()=>{
     addMarker($("#addCode").value,$("#addName").value);
     $("#addCode").value=""; $("#addCode").focus(); // название остаётся для серии
@@ -932,6 +983,18 @@ function initEvents(){
   $("#modalBg").onclick=e=>{ if(e.target===$("#modalBg")) $("#modalBg").classList.remove("show"); };
 }
 
+/* ---------- mobile view ---------- */
+function setMView(v){
+  document.body.dataset.mview=v;
+  document.querySelectorAll("#mobileNav button").forEach(b=>b.classList.toggle("active",b.dataset.mtab===v));
+  if(v==="preview"){
+    fitWidth();
+  }else{
+    const tab=document.querySelector(`.tabs button[data-tab=${v}]`);
+    if(tab) tab.onclick();
+  }
+}
+
 /* ---------- boot ---------- */
 function boot(){
   initTheme();
@@ -944,6 +1007,7 @@ function boot(){
   bindDesign();
   initEvents();
   renderMarkers(); renderSets(); renderSheet();
+  if(matchMedia("(max-width:800px)").matches) setMView("markers");
   fitWidth();
 }
 boot();
