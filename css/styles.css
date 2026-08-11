@@ -3,6 +3,8 @@
     --text:#1d1d1f; --muted:#86868b; --accent:#0071e3; --accent-h:#0077ed;
     --danger:#ff3b30; --radius:14px;
     --shadow:0 1px 3px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.05);
+    --head:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --script:Caveat,cursive;
   }
   body[data-theme=dark]{
     --bg:#161617; --panel:#1d1d1f; --panel2:#2c2c2e; --line:#3a3a3c; --line2:#48484a;
@@ -259,7 +261,8 @@
   .welcome.show{display:flex;align-items:center;justify-content:center}
   .welcome-inner{width:min(1040px,92vw);padding:40px 0;text-align:center;animation:fadeUp .5s ease}
   .welcome-head{margin-bottom:30px}
-  .welcome-logo{font-size:clamp(30px,6vw,52px);font-weight:800;letter-spacing:-1px}
+  .welcome-logo{font-size:clamp(44px,11vw,120px);font-weight:800;letter-spacing:-3px;line-height:.95}
+  .welcome-logo .accent{color:var(--accent)}
   .welcome-tag{color:var(--muted);font-size:clamp(14px,2.4vw,18px);margin-top:8px}
   .welcome-by{display:inline-block;margin-top:10px;font-family:Caveat,cursive;font-size:22px;color:var(--accent);text-decoration:none}
   .welcome-cards{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:10px}
@@ -327,3 +330,41 @@
     background:linear-gradient(115deg,transparent,rgba(255,255,255,.5),transparent);
     transform:skewX(-22deg);transition:left .6s ease;pointer-events:none}
   #modeSeg button:hover::after{left:135%}
+
+  /* ===== парящие элементы приветствия ===== */
+  .floaties{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+  .floatie{position:absolute;bottom:-8vh;opacity:0;will-change:transform,opacity;
+    animation:floatUp linear infinite}
+  @keyframes floatUp{
+    0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:0}
+    8%{opacity:.9}
+    50%{transform:translateY(-58vh) translateX(var(--sway,20px)) rotate(180deg)}
+    92%{opacity:.9}
+    100%{transform:translateY(-116vh) translateX(0) rotate(360deg);opacity:0}
+  }
+  .floatie.dot{border-radius:50%}
+  @media (prefers-reduced-motion:reduce){.floatie{display:none}}
+
+  /* ===== выезжающая панель импорта ===== */
+  .drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:.25s;z-index:60;backdrop-filter:blur(2px)}
+  .drawer-bg.show{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:min(440px,92vw);z-index:61;
+    background:var(--panel);box-shadow:-12px 0 40px rgba(0,0,0,.18);
+    transform:translateX(102%);transition:transform .32s cubic-bezier(.4,0,.2,1);
+    padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+  .drawer.show{transform:none}
+  .drawer-head{display:flex;align-items:center;justify-content:space-between}
+  .drawer-head h3{margin:0;font-size:18px;font-weight:700}
+  .drawer-close{background:var(--panel2);border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;color:var(--text);font-size:14px}
+  .drawer-close:hover{background:var(--line)}
+  .drawer textarea{width:100%;min-height:160px;resize:vertical;padding:10px 12px;
+    background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:12px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;outline:none}
+  .drawer textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+  .drawer-sep{height:1px;background:var(--line);margin:4px 0}
+  .drawer-links{display:flex;flex-direction:column;gap:8px}
+  @media print{.drawer,.drawer-bg{display:none!important}}
+
+  /* ===== разметка полей трекера (пунктир, только на превью) ===== */
+  .sheet.guides .tguide{outline:1px dashed var(--accent);outline-offset:2px}
+  @media print{.sheet.guides .tguide{outline:none!important}}

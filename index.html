@@ -19,10 +19,11 @@
   <div class="blobs" aria-hidden="true">
     <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span>
   </div>
+  <div class="floaties" id="floaties" aria-hidden="true"></div>
   <div class="welcome-inner">
     <div class="welcome-head">
-      <div class="welcome-logo">🎨 Palette Creator</div>
-      <div class="welcome-tag">Конструктор палитр и трекеров для акриловых маркеров</div>
+      <div class="welcome-logo">Твоя <span class="accent">палитра</span><br>маркеров</div>
+      <div class="welcome-tag">Конструктор выкрасок и трекеров для акриловых маркеров</div>
       <a class="welcome-by" href="https://www.instagram.com/darya.acryllove/" target="_blank" rel="noopener">by darya.acryllove</a>
     </div>
     <div class="welcome-cards">
@@ -327,6 +328,7 @@
           </select>
         </div>
         <div class="hint">💡 Печатайте <b>на A4 без полей</b> (кнопка PDF — уже без полей и колонтитулов). Разрежьте по пунктиру ✂ — получите готовые страницы A5 для блокнота. Обе страницы одинаковые: меняете настройки — меняются все.</div>
+        <label class="toggle" style="margin-top:8px"><input type="checkbox" id="tGuides"> Показать границы полей (пунктир) — только на превью</label>
       </div>
 
       <div class="card" id="tPaperWrap">
@@ -482,6 +484,25 @@
 </nav>
 
 <div class="toast" id="toast"></div>
+
+<div class="drawer-bg" id="drawerBg"></div>
+<aside class="drawer" id="importDrawer" aria-hidden="true">
+  <div class="drawer-head">
+    <h3>Импорт палитры</h3>
+    <button class="drawer-close" id="drawerClose" aria-label="Закрыть">✕</button>
+  </div>
+  <p class="hint">Вставьте JSON (из «Экспорт JSON») или строку из ссылки после <b>#p=</b>. Текущие данные будут заменены.</p>
+  <textarea id="drawerText" spellcheck="false" placeholder="Вставьте сюда JSON или код из ссылки…"></textarea>
+  <div class="drawer-actions">
+    <button class="btn primary wide" id="drawerImport">Импортировать</button>
+  </div>
+  <div class="drawer-sep"></div>
+  <p class="hint" style="margin-top:0">Быстрые действия:</p>
+  <div class="drawer-links">
+    <button class="btn wide" id="drawerShare">🔗 Поделиться ссылкой</button>
+    <button class="btn wide" id="drawerExport">⇩ Экспорт JSON</button>
+  </div>
+</aside>
 
 <div class="modal-bg" id="modalBg">
   <div class="modal">

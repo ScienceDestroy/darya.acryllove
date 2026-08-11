@@ -61,7 +61,7 @@ const DEFAULT_TRACKER = {
   fields:["Тема","Дата","Номер страницы","Заметки"], fieldFont:"Caveat, cursive", fieldSize:14,
   cols:3, rows:10, boxH:11, sqW:11, sqH:11, rectW:22, rectH:11, boxGap:4, boxR:2,
   punch:false, punchN:4, punchSide:"left", punchD:5, punchMargin:8, punchDist:"custom", punchGaps:"45, 65, 45",
-  sheetPaper:"A4", copies:1, layout:"single",
+  sheetPaper:"A4", copies:1, layout:"single", showGuides:false,
   font:"Montserrat, Arial, sans-serif", lineColor:"#cbb6c2", textColor:"#6b5563", accent:"#e59ab5"
 };
 
@@ -403,7 +403,7 @@ function bindTracker(){
   S("#tFields",t.fields.join("\n")); S("#tFieldFont",t.fieldFont); S("#tFieldSize",t.fieldSize);
   S("#tCols",t.cols); S("#tRows",t.rows); S("#tBoxGap",t.boxGap); S("#tBoxR",t.boxR);
   S("#tSqW",t.sqW); S("#tSqH",t.sqH); S("#tRectW",t.rectW); S("#tRectH",t.rectH);
-  S("#tLayout",t.layout);
+  S("#tLayout",t.layout); S("#tGuides",t.showGuides);
   const single=t.layout==="single";
   if($("#tPaperWrap")) $("#tPaperWrap").style.display = single ? "" : "none";
   S("#tPunch",t.punch); S("#tPunchN",t.punchN); S("#tPunchSide",t.punchSide); S("#tPunchD",t.punchD); S("#tPunchM",t.punchMargin);
@@ -423,7 +423,7 @@ function readTracker(){
   t.fieldFont=g("#tFieldFont").value; t.fieldSize=+g("#tFieldSize").value;
   t.cols=+g("#tCols").value; t.rows=+g("#tRows").value; t.boxGap=+g("#tBoxGap").value; t.boxR=+g("#tBoxR").value;
   t.sqW=+g("#tSqW").value; t.sqH=+g("#tSqH").value; t.rectW=+g("#tRectW").value; t.rectH=+g("#tRectH").value;
-  t.layout=g("#tLayout").value;
+  t.layout=g("#tLayout").value; t.showGuides=g("#tGuides").checked;
   const single=t.layout==="single";
   if($("#tPaperWrap")) $("#tPaperWrap").style.display = single ? "" : "none";
   t.punch=g("#tPunch").checked; t.punchN=+g("#tPunchN").value; t.punchSide=g("#tPunchSide").value; t.punchD=+g("#tPunchD").value; t.punchMargin=+g("#tPunchM").value;
@@ -480,14 +480,14 @@ function trackerSheet(){
 function trackerUnitHtml(uw,uh,cut){
   const t=state.tracker;
   const padCss=`${t.padTop*MM}px ${t.padRight*MM}px ${t.padBottom*MM}px ${t.padLeft*MM}px`;
-  const titleHtml = t.title ? `<div style="text-align:${t.titleAlign};font-family:${t.titleFont};font-size:${t.titleSize}pt;line-height:1.1">${escapeHtml(t.title)}</div>`:"";
+  const titleHtml = t.title ? `<div class="tguide" style="text-align:${t.titleAlign};font-family:${t.titleFont};font-size:${t.titleSize}pt;line-height:1.1">${escapeHtml(t.title)}</div>`:"";
   const subHtml = t.subtitle ? `<div style="text-align:${t.titleAlign};font-family:${t.fieldFont};font-size:${t.fieldSize+2}pt;color:${t.accent};margin-top:1mm">${escapeHtml(t.subtitle)}</div>`:"";
   const fieldsHtml = t.fields.map(f=>`<div style="display:flex;align-items:flex-end;gap:${2*MM}px;margin-bottom:${t.fieldSize*0.6}px">
       <span style="font-family:${t.fieldFont};font-size:${t.fieldSize}pt;white-space:nowrap">${escapeHtml(f)}</span>
       <span style="flex:1;border-bottom:1px solid ${t.lineColor};height:${t.fieldSize}pt"></span></div>`).join("");
   const stWmm=Math.min(t.stickerW, uw-t.padLeft-t.padRight);
   const sticker = t.sticker ? `<div style="flex:0 0 ${stWmm*MM}px;height:${t.stickerH*MM}px;border:1.5px dashed ${t.lineColor};border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;color:${t.lineColor};font-family:${t.font};font-size:${t.fieldSize-1}pt;padding:8px">${escapeHtml(t.stickerText||"")}</div>`:"";
-  const header = `<div style="display:flex;gap:${6*MM}px;margin-top:${4*MM}px;align-items:center;min-height:${(t.sticker?t.stickerH:26)*MM}px">${sticker}<div style="flex:1;display:flex;flex-direction:column;justify-content:center">${fieldsHtml}</div></div>`;
+  const header = `<div class="tguide" style="display:flex;gap:${6*MM}px;margin-top:${4*MM}px;align-items:center;min-height:${(t.sticker?t.stickerH:26)*MM}px">${sticker}<div class="tguide" style="flex:1;display:flex;flex-direction:column;justify-content:center">${fieldsHtml}</div></div>`;
   const rowH=Math.max(t.sqH,t.rectH)*MM, sq=t.sqW*MM, sqh=t.sqH*MM, rw=t.rectW*MM, rh=t.rectH*MM, br=t.boxR, gp=1.5*MM;
   // клетка = квадрат + прямоугольник + линия (ширина и высота каждого — раздельно)
   const cellInner=`<div style="display:flex;align-items:flex-end;gap:${gp}px;height:${rowH}px">
@@ -496,7 +496,7 @@ function trackerUnitHtml(uw,uh,cut){
       <span style="flex:1;min-width:0;border-bottom:1px solid ${t.lineColor}"></span>
     </div>`;
   let boxes=""; for(let i=0;i<t.cols*t.rows;i++) boxes+=cellInner;
-  const grid = `<div style="display:grid;grid-template-columns:repeat(${t.cols},1fr);gap:${t.boxGap*MM}px;margin-top:${6*MM}px">${boxes}</div>`;
+  const grid = `<div class="tguide" style="display:grid;grid-template-columns:repeat(${t.cols},1fr);gap:${t.boxGap*MM}px;margin-top:${6*MM}px">${boxes}</div>`;
   let punch="";
   if(t.punch){
     const dd=t.punchD*MM, m=t.punchMargin*MM;
@@ -523,15 +523,16 @@ function cutLinesHtml(L,sw,sh){
 }
 function renderTracker(){
   const L=trackerLayout(), sw=L.sheetW, sh=L.sheetH;
+  const gcl=state.tracker.showGuides?" guides":"";
   $("#pageStyle").textContent=`@page{size:${L.paperCss==="Letter"?"letter":L.paperCss} ${L.orient};margin:0}`;
   if(L.pages===1){
-    $("#sheetWrap").innerHTML=`<div class="sheet" style="position:relative;width:${sw*MM}px;height:${sh*MM}px">${trackerUnitHtml(sw,sh,false)}</div>`;
+    $("#sheetWrap").innerHTML=`<div class="sheet${gcl}" style="position:relative;width:${sw*MM}px;height:${sh*MM}px">${trackerUnitHtml(sw,sh,false)}</div>`;
     $("#pageInfo").textContent="Трекер · 1 страница";
   }else{
     const cellW=sw/L.cols, cellH=sh/L.rows;
     let cells="";
     for(let i=0;i<L.cols*L.rows;i++) cells+=`<div style="position:relative;overflow:hidden">${trackerUnitHtml(cellW,cellH,false)}</div>`;
-    $("#sheetWrap").innerHTML=`<div class="sheet" style="position:relative;width:${sw*MM}px;height:${sh*MM}px;display:grid;grid-template-columns:repeat(${L.cols},1fr);grid-template-rows:repeat(${L.rows},1fr)">${cells}${cutLinesHtml(L,sw,sh)}</div>`;
+    $("#sheetWrap").innerHTML=`<div class="sheet${gcl}" style="position:relative;width:${sw*MM}px;height:${sh*MM}px;display:grid;grid-template-columns:repeat(${L.cols},1fr);grid-template-rows:repeat(${L.rows},1fr)">${cells}${cutLinesHtml(L,sw,sh)}</div>`;
     $("#pageInfo").textContent=`Трекер · ${L.pages} стр. на листе A4 (разрезать по ✂)`;
   }
   applyZoom();
@@ -1042,18 +1043,22 @@ function initEvents(){
     a.href=URL.createObjectURL(blob); a.download="palette.json"; a.click();
     modal({title:"Экспорт JSON",hint:"Файл palette.json скачан. Ниже — те же данные, можно скопировать.",value:data,readonly:true});
   };
-  $("#btnImport").onclick=()=>{
-    modal({title:"Импорт",hint:"Вставьте JSON (из экспорта) или строку из ссылки после #p=. Текущие данные будут заменены.",value:"",onOk:(txt)=>{
-      txt=txt.trim(); if(!txt) return;
-      try{
-        let obj;
-        if(txt.startsWith("{")) obj=JSON.parse(txt);
-        else obj=decodeShare(txt.replace(/^#?p=/,""));
-        importData(obj);
-        toast("Импортировано");
-      }catch(e){ toast("Не удалось разобрать данные"); }
-    }});
+  // выезжающая панель импорта
+  const openDrawer=()=>{ $("#importDrawer").classList.add("show"); $("#drawerBg").classList.add("show"); $("#drawerText").focus(); };
+  const closeDrawer=()=>{ $("#importDrawer").classList.remove("show"); $("#drawerBg").classList.remove("show"); };
+  $("#btnImport").onclick=openDrawer;
+  $("#drawerClose").onclick=closeDrawer;
+  $("#drawerBg").onclick=closeDrawer;
+  $("#drawerImport").onclick=()=>{
+    const txt=$("#drawerText").value.trim(); if(!txt){ toast("Вставьте данные"); return; }
+    try{
+      const obj = txt.startsWith("{") ? JSON.parse(txt) : decodeShare(txt.replace(/^#?p=/,""));
+      importData(obj); $("#drawerText").value=""; closeDrawer(); toast("Импортировано");
+    }catch(e){ toast("Не удалось разобрать данные"); }
   };
+  $("#drawerShare").onclick=()=>{ closeDrawer(); $("#btnShare").click(); };
+  $("#drawerExport").onclick=()=>{ closeDrawer(); $("#btnExport").click(); };
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDrawer(); });
   // клик по тексту ленточки на листе — редактирование на месте
   $("#sheetWrap").addEventListener("click",e=>{
     const t=e.target.closest(".c-code,.c-name");
@@ -1105,7 +1110,28 @@ function setMode(v){
 function unsplash(id){ return `https://images.unsplash.com/photo-${id}?w=900&q=70&auto=format&fit=crop`; }
 function showWelcome(){ $("#welcome").classList.add("show"); }
 function hideWelcome(){ $("#welcome").classList.remove("show"); localStorage.setItem("palette_seen","1"); }
+function spawnFloaties(){
+  const box=$("#floaties"); if(!box) return;
+  box.innerHTML="";
+  const emojis=["🖊️","🎨","✏️","🖍️","🌈","✨","🖌️","🟣","🔵","🟢","🟡","🩷"];
+  const colors=["#5b8cff","#ff6fae","#54d6a6","#ffc24d","#c181d1","#00c2d6"];
+  const N=22;
+  for(let i=0;i<N;i++){
+    const el=document.createElement("span");
+    const useEmoji=Math.random()<0.6;
+    const size=useEmoji?(16+Math.random()*20):(6+Math.random()*12);
+    el.className="floatie"+(useEmoji?"":" dot");
+    if(useEmoji){ el.textContent=emojis[(Math.random()*emojis.length)|0]; el.style.fontSize=size+"px"; }
+    else { el.style.width=size+"px"; el.style.height=size+"px"; el.style.background=colors[(Math.random()*colors.length)|0]; el.style.opacity=".0"; }
+    el.style.left=(Math.random()*100)+"vw";
+    el.style.setProperty("--sway",(Math.random()*80-40)+"px");
+    el.style.animationDuration=(12+Math.random()*16)+"s";
+    el.style.animationDelay=(-Math.random()*20)+"s";
+    box.appendChild(el);
+  }
+}
 function initWelcome(){
+  spawnFloaties();
   // подгружаем фото Unsplash с плавным фолбэком на градиент
   document.querySelectorAll(".wcard-img[data-img]").forEach(el=>{
     const im=new Image();
