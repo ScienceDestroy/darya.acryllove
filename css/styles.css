@@ -261,7 +261,7 @@
   .welcome.show{display:flex;align-items:center;justify-content:center}
   .welcome-inner{width:min(1040px,92vw);padding:40px 0;text-align:center;animation:fadeUp .5s ease}
   .welcome-head{margin-bottom:30px}
-  .welcome-logo{font-size:clamp(44px,11vw,120px);font-weight:800;letter-spacing:-3px;line-height:.95}
+  .welcome-logo{font-size:clamp(40px,10vw,104px);font-weight:800;letter-spacing:-2px;line-height:1.02;margin-bottom:14px}
   .welcome-logo .accent{color:var(--accent)}
   .welcome-tag{color:var(--muted);font-size:clamp(14px,2.4vw,18px);margin-top:8px}
   .welcome-by{display:inline-block;margin-top:10px;font-family:Caveat,cursive;font-size:22px;color:var(--accent);text-decoration:none}

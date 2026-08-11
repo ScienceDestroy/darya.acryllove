@@ -61,7 +61,7 @@ const DEFAULT_TRACKER = {
   fields:["Тема","Дата","Номер страницы","Заметки"], fieldFont:"Caveat, cursive", fieldSize:14,
   cols:3, rows:10, boxH:11, sqW:11, sqH:11, rectW:22, rectH:11, boxGap:4, boxR:2,
   punch:false, punchN:4, punchSide:"left", punchD:5, punchMargin:8, punchDist:"custom", punchGaps:"45, 65, 45",
-  sheetPaper:"A4", copies:1, layout:"single", showGuides:false,
+  sheetPaper:"A4", copies:1, layout:"single", showGuides:false, cutLine:true,
   font:"Montserrat, Arial, sans-serif", lineColor:"#cbb6c2", textColor:"#6b5563", accent:"#e59ab5"
 };
 
@@ -403,7 +403,7 @@ function bindTracker(){
   S("#tFields",t.fields.join("\n")); S("#tFieldFont",t.fieldFont); S("#tFieldSize",t.fieldSize);
   S("#tCols",t.cols); S("#tRows",t.rows); S("#tBoxGap",t.boxGap); S("#tBoxR",t.boxR);
   S("#tSqW",t.sqW); S("#tSqH",t.sqH); S("#tRectW",t.rectW); S("#tRectH",t.rectH);
-  S("#tLayout",t.layout); S("#tGuides",t.showGuides);
+  S("#tLayout",t.layout); S("#tGuides",t.showGuides); S("#tCutLine",t.cutLine);
   const single=t.layout==="single";
   if($("#tPaperWrap")) $("#tPaperWrap").style.display = single ? "" : "none";
   S("#tPunch",t.punch); S("#tPunchN",t.punchN); S("#tPunchSide",t.punchSide); S("#tPunchD",t.punchD); S("#tPunchM",t.punchMargin);
@@ -423,7 +423,7 @@ function readTracker(){
   t.fieldFont=g("#tFieldFont").value; t.fieldSize=+g("#tFieldSize").value;
   t.cols=+g("#tCols").value; t.rows=+g("#tRows").value; t.boxGap=+g("#tBoxGap").value; t.boxR=+g("#tBoxR").value;
   t.sqW=+g("#tSqW").value; t.sqH=+g("#tSqH").value; t.rectW=+g("#tRectW").value; t.rectH=+g("#tRectH").value;
-  t.layout=g("#tLayout").value; t.showGuides=g("#tGuides").checked;
+  t.layout=g("#tLayout").value; t.showGuides=g("#tGuides").checked; t.cutLine=g("#tCutLine").checked;
   const single=t.layout==="single";
   if($("#tPaperWrap")) $("#tPaperWrap").style.display = single ? "" : "none";
   t.punch=g("#tPunch").checked; t.punchN=+g("#tPunchN").value; t.punchSide=g("#tPunchSide").value; t.punchD=+g("#tPunchD").value; t.punchMargin=+g("#tPunchM").value;
@@ -509,13 +509,12 @@ function trackerUnitHtml(uw,uh,cut){
   const cutBorder = cut ? `outline:1px dashed ${t.lineColor};outline-offset:-0.5px;` : "";
   return `<div style="position:relative;width:${uw*MM}px;height:${uh*MM}px;padding:${padCss};overflow:hidden;background:#fff;${cutBorder}font-family:${t.font};color:${t.textColor}">${titleHtml}${subHtml}${header}${grid}${punch}</div>`;
 }
-// линии реза (пунктир + ✂) поверх листа
+// линии реза (пунктир) поверх листа
 function cutLinesHtml(L,sw,sh){
+  if(!state.tracker.cutLine) return "";
   const S=`position:absolute;pointer-events:none;`;
-  const v=`<div style="${S}left:${sw/2*MM}px;top:0;height:${sh*MM}px;border-left:1.5px dashed #b7b7bd"></div>`
-    +`<div style="${S}left:${sw/2*MM}px;top:1px;transform:translateX(-50%);font-size:11px;color:#9a9aa2">✂</div>`;
-  const h=`<div style="${S}top:${sh/2*MM}px;left:0;width:${sw*MM}px;border-top:1.5px dashed #b7b7bd"></div>`
-    +`<div style="${S}top:${sh/2*MM}px;left:1px;transform:translateY(-50%);font-size:11px;color:#9a9aa2">✂</div>`;
+  const v=`<div style="${S}left:${sw/2*MM}px;top:0;height:${sh*MM}px;border-left:1.5px dashed #b7b7bd"></div>`;
+  const h=`<div style="${S}top:${sh/2*MM}px;left:0;width:${sw*MM}px;border-top:1.5px dashed #b7b7bd"></div>`;
   if(L.cut==="v") return v;
   if(L.cut==="h") return h;
   if(L.cut==="cross") return v+h;
@@ -533,7 +532,7 @@ function renderTracker(){
     let cells="";
     for(let i=0;i<L.cols*L.rows;i++) cells+=`<div style="position:relative;overflow:hidden">${trackerUnitHtml(cellW,cellH,false)}</div>`;
     $("#sheetWrap").innerHTML=`<div class="sheet${gcl}" style="position:relative;width:${sw*MM}px;height:${sh*MM}px;display:grid;grid-template-columns:repeat(${L.cols},1fr);grid-template-rows:repeat(${L.rows},1fr)">${cells}${cutLinesHtml(L,sw,sh)}</div>`;
-    $("#pageInfo").textContent=`Трекер · ${L.pages} стр. на листе A4 (разрезать по ✂)`;
+    $("#pageInfo").textContent=`Трекер · ${L.pages} стр. на листе A4 (разрезать по пунктиру)`;
   }
   applyZoom();
 }
@@ -829,10 +828,12 @@ function drawTrackerCanvas(dpi){
     ctx.drawImage(unit,Math.round(c*cellW*s),Math.round(r*cellH*s));
   }
   // линии реза
-  ctx.strokeStyle="#b7b7bd"; ctx.lineWidth=1.5; ctx.setLineDash([6,5]);
-  if(L.cut==="v"||L.cut==="cross"){ ctx.beginPath(); ctx.moveTo(sw/2*s,0); ctx.lineTo(sw/2*s,sh*s); ctx.stroke(); }
-  if(L.cut==="h"||L.cut==="cross"){ ctx.beginPath(); ctx.moveTo(0,sh/2*s); ctx.lineTo(sw*s,sh/2*s); ctx.stroke(); }
-  ctx.setLineDash([]);
+  if(t.cutLine){
+    ctx.strokeStyle="#b7b7bd"; ctx.lineWidth=1.5; ctx.setLineDash([6,5]);
+    if(L.cut==="v"||L.cut==="cross"){ ctx.beginPath(); ctx.moveTo(sw/2*s,0); ctx.lineTo(sw/2*s,sh*s); ctx.stroke(); }
+    if(L.cut==="h"||L.cut==="cross"){ ctx.beginPath(); ctx.moveTo(0,sh/2*s); ctx.lineTo(sw*s,sh/2*s); ctx.stroke(); }
+    ctx.setLineDash([]);
+  }
   return {cv:sheet, w:sw, h:sh};
 }
 async function exportPdf(){
