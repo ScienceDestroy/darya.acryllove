@@ -62,6 +62,9 @@ const DEFAULT_TRACKER = {
   cols:3, rows:10, boxH:11, sqW:11, sqH:11, rectW:22, rectH:11, boxGap:4, boxR:2,
   punch:false, punchN:4, punchSide:"left", punchD:5, punchMargin:8, punchDist:"custom", punchGaps:"45, 65, 45",
   sheetPaper:"A4", copies:1, layout:"single", showGuides:false, cutLine:true,
+  pageType:"tracker", divImage:"", divFit:"contain", divBackTitle:"Отметь готовые раскраски",
+  divCount:30, divCols:6, divCircle:12, divNumbered:true,
+  divPadTop:0, divPadRight:0, divPadBottom:0, divPadLeft:0,
   font:"Montserrat, Arial, sans-serif", lineColor:"#cbb6c2", textColor:"#6b5563", accent:"#e59ab5"
 };
 
@@ -298,6 +301,20 @@ function updateBgUI(){
   document.querySelectorAll("#bgModeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.v===d.bgMode));
   document.querySelectorAll("#bgPresets button").forEach(b=>b.classList.toggle("on",b._uri===d.bgImage));
 }
+function updateDivUI(){
+  const t=state.tracker, has=!!t.divImage;
+  if(!$("#divEmpty")) return;
+  $("#divEmpty").style.display = has ? "none" : "";
+  $("#divLoaded").style.display = has ? "" : "none";
+  if(has) $("#divThumb").src=t.divImage;
+}
+function setPageType(v){
+  state.tracker.pageType=v; save();
+  document.querySelectorAll("#pageTypeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  document.querySelectorAll("#trackerDesign .dtype-tracker").forEach(c=>c.style.display = v==="divider"?"none":"");
+  const dc=$("#dividerCard"); if(dc) dc.style.display = v==="divider"?"":"none";
+  renderSheet(); fitWidth();
+}
 function updateSliderFills(){
   document.querySelectorAll('input[type=range]').forEach(el=>{
     const min=+el.min||0, max=+el.max||100, v=+el.value;
@@ -404,6 +421,10 @@ function bindTracker(){
   S("#tCols",t.cols); S("#tRows",t.rows); S("#tBoxGap",t.boxGap); S("#tBoxR",t.boxR);
   S("#tSqW",t.sqW); S("#tSqH",t.sqH); S("#tRectW",t.rectW); S("#tRectH",t.rectH);
   S("#tLayout",t.layout); S("#tGuides",t.showGuides); S("#tCutLine",t.cutLine);
+  S("#divFit",t.divFit); S("#divBackTitle",t.divBackTitle); S("#divCount",t.divCount);
+  S("#divCols",t.divCols); S("#divCircle",t.divCircle); S("#divNumbered",t.divNumbered);
+  S("#divPadTop",t.divPadTop); S("#divPadBottom",t.divPadBottom); S("#divPadLeft",t.divPadLeft); S("#divPadRight",t.divPadRight);
+  updateDivUI();
   const single=t.layout==="single";
   if($("#tPaperWrap")) $("#tPaperWrap").style.display = single ? "" : "none";
   S("#tPunch",t.punch); S("#tPunchN",t.punchN); S("#tPunchSide",t.punchSide); S("#tPunchD",t.punchD); S("#tPunchM",t.punchMargin);
@@ -424,6 +445,9 @@ function readTracker(){
   t.cols=+g("#tCols").value; t.rows=+g("#tRows").value; t.boxGap=+g("#tBoxGap").value; t.boxR=+g("#tBoxR").value;
   t.sqW=+g("#tSqW").value; t.sqH=+g("#tSqH").value; t.rectW=+g("#tRectW").value; t.rectH=+g("#tRectH").value;
   t.layout=g("#tLayout").value; t.showGuides=g("#tGuides").checked; t.cutLine=g("#tCutLine").checked;
+  t.divFit=g("#divFit").value; t.divBackTitle=g("#divBackTitle").value; t.divCount=+g("#divCount").value;
+  t.divCols=+g("#divCols").value; t.divCircle=+g("#divCircle").value; t.divNumbered=g("#divNumbered").checked;
+  t.divPadTop=+g("#divPadTop").value; t.divPadBottom=+g("#divPadBottom").value; t.divPadLeft=+g("#divPadLeft").value; t.divPadRight=+g("#divPadRight").value;
   const single=t.layout==="single";
   if($("#tPaperWrap")) $("#tPaperWrap").style.display = single ? "" : "none";
   t.punch=g("#tPunch").checked; t.punchN=+g("#tPunchN").value; t.punchSide=g("#tPunchSide").value; t.punchD=+g("#tPunchD").value; t.punchMargin=+g("#tPunchM").value;
@@ -443,6 +467,9 @@ function updateTrackerLabels(){
   $("#vtSqW").textContent=t.sqW+" мм"; $("#vtSqH").textContent=t.sqH+" мм";
   $("#vtRectW").textContent=t.rectW+" мм"; $("#vtRectH").textContent=t.rectH+" мм";
   $("#vtPunchN").textContent=t.punchN; $("#vtPunchD").textContent=t.punchD+" мм"; $("#vtPunchM").textContent=t.punchMargin+" мм";
+  if($("#vdivCount")){ $("#vdivCount").textContent=t.divCount; $("#vdivCols").textContent=t.divCols; $("#vdivCircle").textContent=t.divCircle+" мм";
+    $("#vdivPadTop").textContent=t.divPadTop+" мм"; $("#vdivPadBottom").textContent=t.divPadBottom+" мм";
+    $("#vdivPadLeft").textContent=t.divPadLeft+" мм"; $("#vdivPadRight").textContent=t.divPadRight+" мм"; }
 }
 // позиции центров отверстий (мм) вдоль края длиной along (мм)
 function punchPositions(along){
@@ -473,8 +500,48 @@ function trackerLayout(){
 }
 // физический лист печати (для fitWidth и @page)
 function trackerSheet(){
+  const t=state.tracker;
+  if(t.pageType==="divider"){
+    const p=PAPER[t.paper]; let w=p.w,h=p.h; if(t.orient==="landscape")[w,h]=[h,w];
+    return {key:t.paper, w, h, orient:t.orient};
+  }
   const L=trackerLayout();
   return {key:L.paperCss, w:L.sheetW, h:L.sheetH, orient:L.orient};
+}
+// HTML лицевой стороны разделителя (картинка) размером w×h мм
+function divFrontHtml(w,h){
+  const t=state.tracker, padCss=`${t.divPadTop*MM}px ${t.divPadRight*MM}px ${t.divPadBottom*MM}px ${t.divPadLeft*MM}px`;
+  const img = t.divImage
+    ? `<img src="${t.divImage}" style="width:100%;height:100%;object-fit:${t.divFit==="cover"?"cover":"contain"};display:block">`
+    : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:${t.lineColor};border:1.5px dashed ${t.lineColor};border-radius:8px;font-family:${t.font};font-size:${t.fieldSize}pt">Загрузите картинку раскраски</div>`;
+  return `<div style="position:relative;width:${w*MM}px;height:${h*MM}px;padding:${padCss};overflow:hidden;background:#fff;box-sizing:border-box">${img}</div>`;
+}
+// HTML оборотной стороны разделителя (кружки с номерами)
+function divBackHtml(w,h){
+  const t=state.tracker, padCss=`${t.padTop*MM}px ${t.padRight*MM}px ${t.padBottom*MM}px ${t.padLeft*MM}px`;
+  const title = t.divBackTitle
+    ? `<div style="text-align:center;font-family:${t.titleFont};font-size:${Math.max(14,t.titleSize*0.7)}pt;margin-bottom:${4*MM}px">${escapeHtml(t.divBackTitle)}</div>`:"";
+  const sz=t.divCircle*MM;
+  let circles="";
+  for(let i=1;i<=t.divCount;i++){
+    circles+=`<div style="width:${sz}px;height:${sz}px;border-radius:50%;border:1px solid ${t.lineColor};
+      display:flex;align-items:center;justify-content:center;color:${t.textColor};
+      font-family:${t.font};font-size:${Math.max(6,t.divCircle*0.42)}pt">${t.divNumbered?i:""}</div>`;
+  }
+  const grid=`<div style="display:grid;grid-template-columns:repeat(${t.divCols},1fr);gap:${3*MM}px;justify-items:center">${circles}</div>`;
+  return `<div style="position:relative;width:${w*MM}px;height:${h*MM}px;padding:${padCss};overflow:hidden;background:#fff;box-sizing:border-box;font-family:${t.font};color:${t.textColor}">${title}${grid}</div>`;
+}
+function renderDivider(){
+  const t=state.tracker, p=PAPER[t.paper];
+  let w=p.w,h=p.h; if(t.orient==="landscape")[w,h]=[h,w];
+  $("#pageStyle").textContent=`@page{size:${t.paper==="Letter"?"letter":t.paper} ${t.orient};margin:0}`;
+  $("#sheetWrap").innerHTML=
+    `<div class="sheet-cap">Лицевая сторона</div>`
+    +`<div class="sheet" style="position:relative;width:${w*MM}px;height:${h*MM}px">${divFrontHtml(w,h)}</div>`
+    +`<div class="sheet-cap">Оборотная сторона</div>`
+    +`<div class="sheet" style="position:relative;width:${w*MM}px;height:${h*MM}px">${divBackHtml(w,h)}</div>`;
+  $("#pageInfo").textContent="Разделитель · 2 стороны";
+  applyZoom();
 }
 // HTML одной единицы трекера размером uw×uh мм
 function trackerUnitHtml(uw,uh,cut){
@@ -521,6 +588,7 @@ function cutLinesHtml(L,sw,sh){
   return "";
 }
 function renderTracker(){
+  if(state.tracker.pageType==="divider"){ renderDivider(); return; }
   const L=trackerLayout(), sw=L.sheetW, sh=L.sheetH;
   const gcl=state.tracker.showGuides?" guides":"";
   $("#pageStyle").textContent=`@page{size:${L.paperCss==="Letter"?"letter":L.paperCss} ${L.orient};margin:0}`;
@@ -836,12 +904,56 @@ function drawTrackerCanvas(dpi){
   }
   return {cv:sheet, w:sw, h:sh};
 }
+// разделитель: два canvas (лицо с картинкой + оборот с кружками)
+async function drawDividerCanvases(dpi){
+  const t=state.tracker, p=PAPER[t.paper]; let w=p.w,h=p.h; if(t.orient==="landscape")[w,h]=[h,w];
+  const s=dpi/25.4, pm=v=>v*0.3528;
+  // лицо
+  const front=document.createElement("canvas"); front.width=Math.round(w*s); front.height=Math.round(h*s);
+  const fc=front.getContext("2d"); fc.fillStyle="#fff"; fc.fillRect(0,0,front.width,front.height);
+  if(t.divImage){
+    const img=await new Promise(r=>{ const im=new Image(); im.onload=()=>r(im); im.onerror=()=>r(null); im.src=t.divImage; });
+    if(img){
+      const ax=t.divPadLeft*s, ay=t.divPadTop*s, aw=(w-t.divPadLeft-t.divPadRight)*s, ah=(h-t.divPadTop-t.divPadBottom)*s;
+      const ar=img.naturalWidth/img.naturalHeight, br=aw/ah;
+      let dw,dh;
+      if(t.divFit==="cover"){ if(br>ar){dw=aw;dh=aw/ar;}else{dh=ah;dw=ah*ar;} }
+      else { if(br>ar){dh=ah;dw=ah*ar;}else{dw=aw;dh=aw/ar;} }
+      fc.save(); fc.beginPath(); fc.rect(ax,ay,aw,ah); fc.clip();
+      fc.drawImage(img, ax+(aw-dw)/2, ay+(ah-dh)/2, dw, dh); fc.restore();
+    }
+  }
+  // оборот
+  const back=document.createElement("canvas"); back.width=Math.round(w*s); back.height=Math.round(h*s);
+  const bc=back.getContext("2d"); bc.scale(s,s); bc.fillStyle="#fff"; bc.fillRect(0,0,w,h);
+  let y=t.padTop;
+  if(t.divBackTitle){
+    bc.fillStyle=t.textColor; bc.font=`${pm(Math.max(14,t.titleSize*0.7))}px ${t.titleFont}`;
+    bc.textAlign="center"; bc.textBaseline="top"; bc.fillText(t.divBackTitle, w/2, y);
+    y+=pm(Math.max(14,t.titleSize*0.7))*1.4;
+  }
+  const cw=w-t.padLeft-t.padRight, gap=3, cellW=(cw-gap*(t.divCols-1))/t.divCols;
+  const d=t.divCircle, cellH=d+gap;
+  bc.strokeStyle=t.lineColor; bc.lineWidth=0.3; bc.setLineDash([]);
+  bc.textAlign="center"; bc.textBaseline="middle"; bc.fillStyle=t.textColor;
+  bc.font=`${pm(Math.max(6,t.divCircle*0.42))}px ${t.font}`;
+  for(let i=0;i<t.divCount;i++){
+    const c=i%t.divCols, r=Math.floor(i/t.divCols);
+    const cx=t.padLeft+c*(cellW+gap)+cellW/2, cy=y+r*cellH+d/2;
+    if(cy+d/2>h-t.padBottom) break;
+    bc.beginPath(); bc.arc(cx,cy,d/2,0,7); bc.stroke();
+    if(t.divNumbered) bc.fillText(String(i+1),cx,cy);
+  }
+  return {cvs:[front,back], w, h};
+}
 async function exportPdf(){
   if(state.mode!=="tracker" && !state.markers.length){ toast("Сначала добавьте маркеры"); return; }
   toast("Готовим PDF…");
   try{ await document.fonts.ready; }catch(e){}
   let cvs, w, h;
-  if(state.mode==="tracker"){
+  if(state.mode==="tracker" && state.tracker.pageType==="divider"){
+    const res=await drawDividerCanvases(200); cvs=res.cvs; w=res.w; h=res.h;
+  }else if(state.mode==="tracker"){
     const res=drawTrackerCanvas(200); cvs=[res.cv]; w=res.w; h=res.h;
   }else{
     const img=await loadBgImage();
@@ -980,7 +1092,22 @@ function initEvents(){
   // трекер: все настройки
   document.querySelectorAll("#trackerDesign input, #trackerDesign select, #trackerDesign textarea")
     .forEach(el=>el.addEventListener("input",readTracker));
-  $("#btnResetTracker").onclick=()=>{ state.tracker={...DEFAULT_TRACKER}; bindTracker(); save(); renderSheet(); toast("Трекер сброшен"); };
+  $("#btnResetTracker").onclick=()=>{ state.tracker={...DEFAULT_TRACKER}; bindTracker(); setPageType(state.tracker.pageType); save(); renderSheet(); toast("Трекер сброшен"); };
+
+  // тип листа: Трекер / Разделитель
+  document.querySelectorAll("#pageTypeSeg button").forEach(b=>{ b.onclick=()=>setPageType(b.dataset.v); });
+  // загрузка картинки разделителя
+  const pickDiv=()=>$("#divFile").click();
+  $("#divDrop").onclick=pickDiv;
+  $("#divReplace").onclick=pickDiv;
+  $("#divFile").addEventListener("change",e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{ state.tracker.divImage=rd.result; save(); updateDivUI(); renderSheet();
+      try{ if((localStorage.getItem(LS)||"").length>4.5e6) toast("Картинка большая — может не сохраниться"); }catch(err){ toast("Слишком большая картинка для сохранения"); } };
+    rd.readAsDataURL(f); e.target.value="";
+  });
+  $("#divClear").onclick=()=>{ state.tracker.divImage=""; save(); updateDivUI(); renderSheet(); };
 
   // переключатель режима Разлиновка / Трекер
   document.querySelectorAll("#modeSeg button").forEach(b=>{
@@ -1173,6 +1300,7 @@ function boot(){
   bindTracker();
   initEvents();
   setMode(state.mode);
+  setPageType(state.tracker.pageType);
   renderMarkers(); renderSets(); renderSheet();
   if(matchMedia("(max-width:800px)").matches) setMView("markers");
   initWelcome();

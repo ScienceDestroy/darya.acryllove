@@ -318,6 +318,56 @@
 
      <div id="trackerDesign" style="display:none">
       <div class="card">
+        <h3>Тип листа</h3>
+        <div class="seg" id="pageTypeSeg">
+          <button data-v="tracker">📋 Трекер</button>
+          <button data-v="divider">🖼 Разделитель</button>
+        </div>
+        <div class="hint">«Разделитель» — вставной лист: лицо с вашей картинкой раскраски, оборот с кружками-номерами для отметки готовых.</div>
+      </div>
+
+      <div class="card dtype-divider" id="dividerCard" style="display:none">
+        <h3>Разделитель раскрасок</h3>
+        <input type="file" id="divFile" accept="image/*" style="display:none">
+        <div id="divEmpty"><div class="bg-drop" id="divDrop">🖼 Загрузить картинку (лицевая сторона)</div></div>
+        <div id="divLoaded" style="display:none">
+          <img class="bg-thumb" id="divThumb" alt="">
+          <div class="row" style="margin-top:8px">
+            <button class="btn small ghost" id="divReplace">Заменить</button>
+            <button class="btn small danger" id="divClear" style="flex:0 0 auto">Убрать</button>
+          </div>
+        </div>
+        <div class="field" style="margin-top:8px"><label>Вписать картинку</label>
+          <select id="divFit"><option value="contain">Целиком (вместить)</option><option value="cover">Заполнить</option></select></div>
+        <div class="row">
+          <div class="field"><label>Поле сверху <span class="rangeval" id="vdivPadTop"></span></label>
+            <input type="range" id="divPadTop" min="0" max="40" step="1"></div>
+          <div class="field"><label>Поле снизу <span class="rangeval" id="vdivPadBottom"></span></label>
+            <input type="range" id="divPadBottom" min="0" max="40" step="1"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Поле слева <span class="rangeval" id="vdivPadLeft"></span></label>
+            <input type="range" id="divPadLeft" min="0" max="40" step="1"></div>
+          <div class="field"><label>Поле справа <span class="rangeval" id="vdivPadRight"></span></label>
+            <input type="range" id="divPadRight" min="0" max="40" step="1"></div>
+        </div>
+        <div class="hint">0 со всех сторон — картинка до самых краёв (без полей). Регулируйте каждое поле отдельно.</div>
+        <div class="drawer-sep" style="margin:10px 0"></div>
+        <div class="field"><label>Заголовок оборотной стороны</label>
+          <input type="text" id="divBackTitle" placeholder="Отметь готовые раскраски"></div>
+        <div class="row">
+          <div class="field"><label>Кол-во кружков <span class="rangeval" id="vdivCount"></span></label>
+            <input type="range" id="divCount" min="1" max="200" step="1"></div>
+          <div class="field"><label>Колонок <span class="rangeval" id="vdivCols"></span></label>
+            <input type="range" id="divCols" min="2" max="14" step="1"></div>
+        </div>
+        <div class="field"><label>Размер кружка <span class="rangeval" id="vdivCircle"></span></label>
+          <input type="range" id="divCircle" min="6" max="24" step="1"></div>
+        <label class="toggle"><input type="checkbox" id="divNumbered"> Номера в кружках</label>
+        <div class="hint">Печать/PDF — 2 страницы (лицо + оборот) для двусторонней печати. Кружки нумеруются 1…N — закрашивайте по мере готовности.</div>
+      </div>
+
+      <div class="card dtype-tracker">
         <h3>Раскладка на листе</h3>
         <div class="field">
           <select id="tLayout">
@@ -360,7 +410,7 @@
         <div class="hint">Каждый отступ настраивается отдельно. Напр. увеличьте «Слева», чтобы освободить место под отверстия для дырокола.</div>
       </div>
 
-      <div class="card">
+      <div class="card dtype-tracker">
         <h3>Заголовок</h3>
         <div class="field"><input type="text" id="tTitle" placeholder="Заголовок (напр. Палитра раскраски)"></div>
         <div class="field"><input type="text" id="tSubtitle" placeholder="Подзаголовок (необязательно)"></div>
@@ -374,7 +424,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card dtype-tracker">
         <h3>Шапка</h3>
         <label class="toggle"><input type="checkbox" id="tSticker"> Место под наклейку обложки</label>
         <div class="field"><input type="text" id="tStickerText" placeholder="Подпись (Место для наклейки обложки)"></div>
@@ -392,7 +442,7 @@
           <input type="range" id="tFieldSize" min="9" max="20" step="1"></div>
       </div>
 
-      <div class="card">
+      <div class="card dtype-tracker">
         <h3>Сетка клеток</h3>
         <div class="row">
           <div class="field"><label>Колонок <span class="rangeval" id="vtCols"></span></label>
