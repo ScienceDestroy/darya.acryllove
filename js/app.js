@@ -57,7 +57,7 @@ const DEFAULT_TRACKER = {
   paper:"A4", orient:"portrait", pad:14,
   padTop:14, padBottom:14, padLeft:14, padRight:14,
   title:"Палитра раскраски", subtitle:"", titleFont:"'Great Vibes', cursive", titleSize:30, titleAlign:"center",
-  sticker:true, stickerText:"Место для наклейки обложки", stickerW:70, stickerH:26,
+  sticker:true, stickerW:70, stickerH:26,
   fields:["Тема","Дата","Номер страницы","Заметки"], fieldFont:"Caveat, cursive", fieldSize:14,
   cols:3, rows:10, boxH:11, sqW:11, sqH:11, rectW:22, rectH:11, boxGap:4, boxR:2,
   punch:false, punchN:4, punchSide:"left", punchD:5, punchMargin:8, punchDist:"custom", punchGaps:"45, 65, 45",
@@ -416,7 +416,7 @@ function bindTracker(){
   S("#tPadTop",t.padTop); S("#tPadBottom",t.padBottom); S("#tPadLeft",t.padLeft); S("#tPadRight",t.padRight);
   S("#tTitle",t.title); S("#tSubtitle",t.subtitle); S("#tTitleFont",t.titleFont);
   S("#tTitleSize",t.titleSize); S("#tTitleAlign",t.titleAlign);
-  S("#tSticker",t.sticker); S("#tStickerText",t.stickerText); S("#tStickerW",t.stickerW); S("#tStickerH",t.stickerH);
+  S("#tSticker",t.sticker); S("#tStickerW",t.stickerW); S("#tStickerH",t.stickerH);
   S("#tFields",t.fields.join("\n")); S("#tFieldFont",t.fieldFont); S("#tFieldSize",t.fieldSize);
   S("#tCols",t.cols); S("#tRows",t.rows); S("#tBoxGap",t.boxGap); S("#tBoxR",t.boxR);
   S("#tSqW",t.sqW); S("#tSqH",t.sqH); S("#tRectW",t.rectW); S("#tRectH",t.rectH);
@@ -439,7 +439,7 @@ function readTracker(){
   t.padTop=+g("#tPadTop").value; t.padBottom=+g("#tPadBottom").value; t.padLeft=+g("#tPadLeft").value; t.padRight=+g("#tPadRight").value;
   t.title=g("#tTitle").value; t.subtitle=g("#tSubtitle").value; t.titleFont=g("#tTitleFont").value;
   t.titleSize=+g("#tTitleSize").value; t.titleAlign=g("#tTitleAlign").value;
-  t.sticker=g("#tSticker").checked; t.stickerText=g("#tStickerText").value; t.stickerW=+g("#tStickerW").value; t.stickerH=+g("#tStickerH").value;
+  t.sticker=g("#tSticker").checked; t.stickerW=+g("#tStickerW").value; t.stickerH=+g("#tStickerH").value;
   t.fields=g("#tFields").value.split("\n").map(s=>s.trim()).filter(Boolean);
   t.fieldFont=g("#tFieldFont").value; t.fieldSize=+g("#tFieldSize").value;
   t.cols=+g("#tCols").value; t.rows=+g("#tRows").value; t.boxGap=+g("#tBoxGap").value; t.boxR=+g("#tBoxR").value;
@@ -553,7 +553,7 @@ function trackerUnitHtml(uw,uh,cut){
       <span style="font-family:${t.fieldFont};font-size:${t.fieldSize}pt;white-space:nowrap">${escapeHtml(f)}</span>
       <span style="flex:1;border-bottom:1px solid ${t.lineColor};height:${t.fieldSize}pt"></span></div>`).join("");
   const stWmm=Math.min(t.stickerW, uw-t.padLeft-t.padRight);
-  const sticker = t.sticker ? `<div style="flex:0 0 ${stWmm*MM}px;height:${t.stickerH*MM}px;border:1.5px dashed ${t.lineColor};border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;color:${t.lineColor};font-family:${t.font};font-size:${t.fieldSize-1}pt;padding:8px">${escapeHtml(t.stickerText||"")}</div>`:"";
+  const sticker = t.sticker ? `<div style="flex:0 0 ${stWmm*MM}px;height:${t.stickerH*MM}px"></div>`:"";
   const header = `<div class="tguide" style="display:flex;gap:${6*MM}px;margin-top:${4*MM}px;align-items:center;min-height:${(t.sticker?t.stickerH:26)*MM}px">${sticker}<div class="tguide" style="flex:1;display:flex;flex-direction:column;justify-content:center">${fieldsHtml}</div></div>`;
   const rowH=Math.max(t.sqH,t.rectH)*MM, sq=t.sqW*MM, sqh=t.sqH*MM, rw=t.rectW*MM, rh=t.rectH*MM, br=t.boxR, gp=1.5*MM;
   // клетка = квадрат + прямоугольник + линия (ширина и высота каждого — раздельно)
@@ -832,19 +832,6 @@ function drawTrackerUnitCanvas(uw,uh,dpi){
   const stW=t.sticker?Math.min(t.stickerW,cw):0;
   const stH=t.sticker?t.stickerH:0;
   const headerH=Math.max(fieldsH,stH,26);
-  if(t.sticker){
-    const bx=padL, by=y+(headerH-stH)/2;
-    ctx.save(); ctx.strokeStyle=t.lineColor; ctx.setLineDash([1.2,1.2]); ctx.lineWidth=0.4;
-    roundRectPath(ctx,bx,by,stW,stH,2); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle=t.lineColor; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font=`${pm(t.fieldSize-1)}px ${t.font}`;
-    // перенос подписи по словам под ширину стикера
-    const words=(t.stickerText||"").split(/\s+/).filter(Boolean); const lines=[]; let cur="";
-    words.forEach(wd=>{ const tryL=cur?cur+" "+wd:wd; if(ctx.measureText(tryL).width>stW-4 && cur){lines.push(cur);cur=wd;} else cur=tryL; });
-    if(cur) lines.push(cur);
-    const lh=pm(t.fieldSize)*1.2, y0=by+stH/2-(lines.length-1)*lh/2;
-    lines.forEach((ln,i)=>ctx.fillText(ln,bx+stW/2,y0+i*lh));
-    ctx.restore();
-  }
   const fx=padL+(t.sticker?stW+6:0), fw=w-padR-fx;
   let fy=y+(headerH-fieldsH)/2;
   ctx.textAlign="left"; ctx.textBaseline="alphabetic";
