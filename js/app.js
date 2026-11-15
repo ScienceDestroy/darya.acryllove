@@ -1,1296 +1,906 @@
 "use strict";
-const $ = s => document.querySelector(s);
-const uid = () => Math.random().toString(36).slice(2,9);
+/* =========================================================
+   Palette Creator — интерфейс.
+   Геометрия/рисование — в engine.js, готовые наборы — в presets.js.
+   ========================================================= */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const uid=()=>Math.random().toString(36).slice(2,9);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const deep=o=>JSON.parse(JSON.stringify(o));
 
-const PAPER = { A4:{w:210,h:297}, A5:{w:148,h:210}, Letter:{w:216,h:279} };
-
-/* ---------- (не используется) палитры производителей [код, название, hex] ---------- */
-const MM = 3.7795; // px per mm at 96dpi
-
-const DEFAULT_DESIGN = {
-  paper:"A4", orient:"portrait", cols:2, pad:10,
-  rowH:16, stripW:0, gap:0, showCode:true, showName:true, border:true, corner:0,
-  font:"Montserrat, Arial, sans-serif", fs:10,
-  codeBold:false, codeItalic:false, nameBold:false, nameItalic:false,
-  codeIndent:14, nameIndent:34,
-  spotShape:"circle", spots:1, spotSize:7, spotIndent:3,
-  ring:true, ringSize:5, ringIndent:3,
-  lineColor:"#d9d9d9", textColor:"#333333",
-  bgImage:"", bgMode:"sheet", bgFit:"cover", bgOpacity:18, bgSize:100, bgPosX:50, bgPosY:50,
-  bgRotate:0, bgTilePx:60,
-  line:false, lineX:24, lineW:1
-};
-
-/* ---------- готовые бесшовные паттерны (SVG) ---------- */
-const P=(w,h,inner,bg)=>`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>${bg?`<rect width='${w}' height='${h}' fill='${bg}'/>`:""}${inner}</svg>`;
-const PRESET_PATTERNS=[
-  {name:"Горошек", size:26, svg:P(26,26,`<g fill='#f191b4'><circle cx='13' cy='13' r='3.2'/><circle cx='0' cy='0' r='3.2'/><circle cx='26' cy='0' r='3.2'/><circle cx='0' cy='26' r='3.2'/><circle cx='26' cy='26' r='3.2'/></g>`)},
-  {name:"Клетка", size:26, svg:P(26,26,`<path d='M26 0H0V26' fill='none' stroke='#a8cdec' stroke-width='1'/>`)},
-  {name:"Линии", size:16, svg:P(14,14,`<path d='M-2 2 L6 -6 M0 14 L14 0 M8 16 L16 8' stroke='#c9b4e6' stroke-width='1.5' fill='none'/>`)},
-  {name:"Волны", size:40, svg:P(40,14,`<path d='M0 7 Q10 1 20 7 T40 7' fill='none' stroke='#79ccc4' stroke-width='1.5'/>`)},
-  {name:"Зигзаг", size:28, svg:P(24,12,`<path d='M0 12 L12 4 L24 12' fill='none' stroke='#f0a35a' stroke-width='1.5'/>`)},
-  {name:"Цветочки", size:46, svg:P(46,46,`<g fill='none' stroke='#ef94b6' stroke-width='1.4'><circle cx='23' cy='13' r='4.2'/><circle cx='33' cy='20' r='4.2'/><circle cx='29' cy='32' r='4.2'/><circle cx='17' cy='32' r='4.2'/><circle cx='13' cy='20' r='4.2'/></g><circle cx='23' cy='23' r='3' fill='#f4bf46'/>`)},
-  {name:"Листья", size:44, svg:P(44,44,`<g stroke='#7bb98d' stroke-width='1.3' fill='none'><path d='M10 40 C 20 30 24 18 22 6'/><path d='M22 14 C 16 12 12 14 12 20'/><path d='M22 22 C 28 20 32 22 32 28'/><path d='M22 30 C 16 28 13 30 13 36'/></g>`)},
-  {name:"Веточки", size:30, svg:P(30,30,`<g stroke='#c7a86a' stroke-width='1.2' fill='none'><path d='M15 28 L15 6'/><path d='M15 12 L9 8 M15 12 L21 8 M15 18 L9 14 M15 18 L21 14 M15 24 L9 20 M15 24 L21 20'/></g>`)},
-  {name:"Сердечки", size:28, svg:P(28,28,`<path d='M14 22 C 6 15 8 8 14 11 C 20 8 22 15 14 22 Z' fill='#f191b4'/>`)},
-  {name:"Звёзды", size:30, svg:P(30,30,`<path d='M15 6 L17 12 L23 12 L18 16 L20 22 L15 18 L10 22 L12 16 L7 12 L13 12 Z' fill='#f4c04e'/>`)},
-  {name:"Круги", size:30, svg:P(30,30,`<g fill='none' stroke='#c9b6e2' stroke-width='1.2'><circle cx='0' cy='15' r='12'/><circle cx='30' cy='15' r='12'/><circle cx='15' cy='0' r='12'/><circle cx='15' cy='30' r='12'/></g>`)},
-  {name:"Терраццо", size:70, svg:P(70,70,`<circle cx='12' cy='16' r='5' fill='#f2b7c4'/><rect x='40' y='8' width='11' height='6' rx='3' fill='#a9d3c9' transform='rotate(20 45 11)'/><circle cx='58' cy='30' r='4' fill='#e9c56a'/><ellipse cx='26' cy='46' rx='6' ry='4' fill='#c9b6e2' transform='rotate(-15 26 46)'/><circle cx='50' cy='56' r='5' fill='#f0a58a'/><rect x='8' y='56' width='9' height='5' rx='2.5' fill='#9ec9e8'/><circle cx='62' cy='64' r='3' fill='#f2b7c4'/>`,"#fbf7f1")},
-  {name:"Мемфис", size:60, svg:P(60,60,`<g fill='none' stroke-width='1.6'><path d='M6 12 q6 -8 12 0 t12 0' stroke='#7ec9c0'/><path d='M44 8 l8 0 M48 4 l0 8' stroke='#f0a35a'/><path d='M28 50 q6 -6 12 0' stroke='#9ec9e8'/></g><path d='M10 44 L18 44 L14 36 Z' fill='#efb0c2'/><circle cx='46' cy='40' r='3' fill='#c9b6e2'/><circle cx='54' cy='52' r='3' fill='#f4c04e'/>`)},
-  {name:"Конфетти", size:48, svg:P(48,48,`<g stroke-width='2' stroke-linecap='round'><line x1='8' y1='8' x2='12' y2='14' stroke='#f191b4'/><line x1='34' y1='6' x2='40' y2='8' stroke='#7ec9c0'/><line x1='20' y1='22' x2='24' y2='18' stroke='#f4c04e'/><line x1='42' y1='26' x2='44' y2='32' stroke='#c9b6e2'/><line x1='10' y1='38' x2='16' y2='40' stroke='#f0a35a'/><line x1='30' y1='40' x2='34' y2='46' stroke='#9ec9e8'/></g>`)}
-];
-// экранируем ', чтобы data-URI можно было безопасно вставлять в url('...') внутри style
-const patternUri=svg=>"data:image/svg+xml,"+encodeURIComponent(svg).replace(/'/g,"%27");
-
-/* ---------- список шрифтов (для трекера) ---------- */
+/* ---------- шрифты ---------- */
 const FONTS=[
   ["Современные",[["Montserrat, Arial, sans-serif","Montserrat"],["Inter, Arial, sans-serif","Inter"],["Manrope, Arial, sans-serif","Manrope"],["Rubik, Arial, sans-serif","Rubik"],["Jost, Arial, sans-serif","Jost"],["Nunito, Arial, sans-serif","Nunito"],["Comfortaa, Arial, sans-serif","Comfortaa"],["Unbounded, Arial, sans-serif","Unbounded"]]],
-  ["Прописные и рукописные",[["Caveat, cursive","Caveat"],["'Marck Script', cursive","Marck Script"],["'Bad Script', cursive","Bad Script"],["Neucha, cursive","Neucha"],["'Dancing Script', cursive","Dancing Script"],["'Great Vibes', cursive","Great Vibes"],["Pacifico, cursive","Pacifico"],["'Amatic SC', cursive","Amatic SC"]]],
+  ["Рукописные",[["Caveat, cursive","Caveat"],["'Marck Script', cursive","Marck Script"],["'Bad Script', cursive","Bad Script"],["Neucha, cursive","Neucha"],["'Dancing Script', cursive","Dancing Script"],["'Great Vibes', cursive","Great Vibes"],["Pacifico, cursive","Pacifico"],["'Amatic SC', cursive","Amatic SC"]]],
   ["С засечками",[["'Playfair Display', Georgia, serif","Playfair Display"],["Cormorant, Georgia, serif","Cormorant"],["Lora, Georgia, serif","Lora"],["Georgia, serif","Georgia"],["'Times New Roman', serif","Times"]]],
-  ["Классические",[["Arial, sans-serif","Arial"],["Helvetica, Arial, sans-serif","Helvetica"],["'Segoe UI', sans-serif","Segoe UI"],["Verdana, sans-serif","Verdana"],["'Trebuchet MS', sans-serif","Trebuchet"],["'Courier New', monospace","Courier"]]]
+  ["Классические",[["Arial, sans-serif","Arial"],["Helvetica, Arial, sans-serif","Helvetica"],["Verdana, sans-serif","Verdana"],["'Trebuchet MS', sans-serif","Trebuchet"],["'Courier New', monospace","Courier"]]]
 ];
-function fillFontSelect(sel){
-  sel.innerHTML=FONTS.map(([g,items])=>`<optgroup label="${g}">`+items.map(([v,l])=>`<option value="${v.replace(/"/g,'&quot;')}" style="font-family:${v}">${l}</option>`).join("")+`</optgroup>`).join("");
+
+/* ---------- готовые паттерны ---------- */
+const P=(w,h,inner,bg)=>`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>${bg?`<rect width='${w}' height='${h}' fill='${bg}'/>`:""}${inner}</svg>`;
+const PRESET_PATTERNS=[
+  {name:"Горошек",size:26,svg:P(26,26,`<g fill='#f191b4'><circle cx='13' cy='13' r='3.2'/><circle cx='0' cy='0' r='3.2'/><circle cx='26' cy='0' r='3.2'/><circle cx='0' cy='26' r='3.2'/><circle cx='26' cy='26' r='3.2'/></g>`)},
+  {name:"Клетка",size:26,svg:P(26,26,`<path d='M26 0H0V26' fill='none' stroke='#a8cdec' stroke-width='1'/>`)},
+  {name:"Линии",size:16,svg:P(14,14,`<path d='M-2 2 L6 -6 M0 14 L14 0 M8 16 L16 8' stroke='#c9b4e6' stroke-width='1.5' fill='none'/>`)},
+  {name:"Волны",size:40,svg:P(40,14,`<path d='M0 7 Q10 1 20 7 T40 7' fill='none' stroke='#79ccc4' stroke-width='1.5'/>`)},
+  {name:"Зигзаг",size:28,svg:P(24,12,`<path d='M0 12 L12 4 L24 12' fill='none' stroke='#f0a35a' stroke-width='1.5'/>`)},
+  {name:"Цветочки",size:46,svg:P(46,46,`<g fill='none' stroke='#ef94b6' stroke-width='1.4'><circle cx='23' cy='13' r='4.2'/><circle cx='33' cy='20' r='4.2'/><circle cx='29' cy='32' r='4.2'/><circle cx='17' cy='32' r='4.2'/><circle cx='13' cy='20' r='4.2'/></g><circle cx='23' cy='23' r='3' fill='#f4bf46'/>`)},
+  {name:"Листья",size:44,svg:P(44,44,`<g stroke='#7bb98d' stroke-width='1.3' fill='none'><path d='M10 40 C 20 30 24 18 22 6'/><path d='M22 14 C 16 12 12 14 12 20'/><path d='M22 22 C 28 20 32 22 32 28'/><path d='M22 30 C 16 28 13 30 13 36'/></g>`)},
+  {name:"Веточки",size:30,svg:P(30,30,`<g stroke='#c7a86a' stroke-width='1.2' fill='none'><path d='M15 28 L15 6'/><path d='M15 12 L9 8 M15 12 L21 8 M15 18 L9 14 M15 18 L21 14 M15 24 L9 20 M15 24 L21 20'/></g>`)},
+  {name:"Сердечки",size:28,svg:P(28,28,`<path d='M14 22 C 6 15 8 8 14 11 C 20 8 22 15 14 22 Z' fill='#f191b4'/>`)},
+  {name:"Звёзды",size:30,svg:P(30,30,`<path d='M15 6 L17 12 L23 12 L18 16 L20 22 L15 18 L10 22 L12 16 L7 12 L13 12 Z' fill='#f4c04e'/>`)},
+  {name:"Круги",size:30,svg:P(30,30,`<g fill='none' stroke='#c9b6e2' stroke-width='1.2'><circle cx='0' cy='15' r='12'/><circle cx='30' cy='15' r='12'/><circle cx='15' cy='0' r='12'/><circle cx='15' cy='30' r='12'/></g>`)},
+  {name:"Терраццо",size:70,svg:P(70,70,`<circle cx='12' cy='16' r='5' fill='#f2b7c4'/><rect x='40' y='8' width='11' height='6' rx='3' fill='#a9d3c9' transform='rotate(20 45 11)'/><circle cx='58' cy='30' r='4' fill='#e9c56a'/><ellipse cx='26' cy='46' rx='6' ry='4' fill='#c9b6e2' transform='rotate(-15 26 46)'/><circle cx='50' cy='56' r='5' fill='#f0a58a'/><rect x='8' y='56' width='9' height='5' rx='2.5' fill='#9ec9e8'/><circle cx='62' cy='64' r='3' fill='#f2b7c4'/>`,"#fbf7f1")},
+  {name:"Мемфис",size:60,svg:P(60,60,`<g fill='none' stroke-width='1.6'><path d='M6 12 q6 -8 12 0 t12 0' stroke='#7ec9c0'/><path d='M44 8 l8 0 M48 4 l0 8' stroke='#f0a35a'/><path d='M28 50 q6 -6 12 0' stroke='#9ec9e8'/></g><path d='M10 44 L18 44 L14 36 Z' fill='#efb0c2'/><circle cx='46' cy='40' r='3' fill='#c9b6e2'/><circle cx='54' cy='52' r='3' fill='#f4c04e'/>`)},
+  {name:"Конфетти",size:48,svg:P(48,48,`<g stroke-width='2' stroke-linecap='round'><line x1='8' y1='8' x2='12' y2='14' stroke='#f191b4'/><line x1='34' y1='6' x2='40' y2='8' stroke='#7ec9c0'/><line x1='20' y1='22' x2='24' y2='18' stroke='#f4c04e'/><line x1='42' y1='26' x2='44' y2='32' stroke='#c9b6e2'/><line x1='10' y1='38' x2='16' y2='40' stroke='#f0a35a'/><line x1='30' y1='40' x2='34' y2='46' stroke='#9ec9e8'/></g>`)}
+];
+const patternUri=svg=>"data:image/svg+xml,"+encodeURIComponent(svg);
+
+/* ---------- настройки по умолчанию ---------- */
+const DEFAULT_DESIGN={
+  paper:"A4",orient:"portrait",customW:210,customH:297,
+  mT:10,mR:10,mB:10,mL:10,marginLink:true,showGuides:true,
+  cols:2,stripW:0,rowH:16,gapX:0,gapY:0,hAlign:"left",order:"rows",
+  border:"solid",borderW:0.25,corner:0,cropMarks:false,
+  font:"Montserrat, Arial, sans-serif",fs:10,codeBold:false,codeItalic:false,nameBold:false,nameItalic:false,
+  showCode:true,showName:true,codeIndent:14,nameIndent:34,autoFit:true,
+  spots:1,spotSize:7,spotIndent:3,spotGap:1.5,spotShape:"circle",spotDash:true,
+  ring:true,ringSize:5,ringIndent:3,
+  line:false,lineX:24,vlineW:0.26,
+  lineColor:"#c9c9c9",textColor:"#333333",nameColor:"#777777",
+  bgImage:"",bgMode:"sheet",bgFit:"cover",bgOpacity:18,bgSize:100,bgPosX:50,bgPosY:50,bgRotate:0,bgTilePx:60
+};
+const DEFAULT_TRACKER={
+  pageType:"tracker",layout:"single",paper:"A4",orient:"portrait",customW:210,customH:297,
+  padTop:14,padBottom:14,padLeft:14,padRight:14,padLink:false,showGuides:false,cutLine:true,
+  title:"Палитра раскраски",subtitle:"",titleFont:"'Great Vibes', cursive",titleSize:30,titleAlign:"center",
+  sticker:true,stickerW:70,stickerH:26,
+  fields:["Тема","Дата","Номер страницы","Заметки"],fieldFont:"Caveat, cursive",fieldSize:14,
+  cols:3,rows:10,sqW:11,sqH:11,rectW:22,rectH:11,boxGap:4,boxR:0.5,
+  punch:false,punchN:4,punchSide:"left",punchD:5,punchMargin:8,punchDist:"custom",punchGaps:"45, 65, 45",
+  divImage:"",divFit:"contain",divBackTitle:"Отметь готовые раскраски",divCount:30,divCols:6,divCircle:12,divNumbered:true,
+  divPadTop:0,divPadRight:0,divPadBottom:0,divPadLeft:0,divPadLink:true,
+  font:"Montserrat, Arial, sans-serif",lineColor:"#cbb6c2",textColor:"#6b5563",accent:"#e59ab5",lineW:0.25
+};
+const DEFAULT_PRINT={sx:100,sy:100,ox:0,oy:0,uT:4,uR:4,uB:4,uL:4,uLink:true,showSafe:true,dpi:300,calPdf:true,tipsSeen:false};
+
+let state={mode:"strips",markers:[],sets:[],design:deep(DEFAULT_DESIGN),tracker:deep(DEFAULT_TRACKER),print:deep(DEFAULT_PRINT),
+  zoom:0.7,labelMode:"color",tab:{strips:"markers",tracker:"page"}};
+
+/* ---------- сохранение ---------- */
+const LS="palette_app_v1";
+let saveT, warnedQuota=false;
+function save(){ clearTimeout(saveT); saveT=setTimeout(saveNow,250); }
+function saveNow(){
+  try{ localStorage.setItem(LS,JSON.stringify({v:2,markers:state.markers,sets:state.sets,design:state.design,tracker:state.tracker,
+    print:state.print,mode:state.mode,labelMode:state.labelMode,tab:state.tab})); }
+  catch(e){ if(!warnedQuota){ warnedQuota=true; toast("Не хватает места для сохранения — скорее всего, слишком большая картинка"); } }
 }
-
-const DEFAULT_TRACKER = {
-  paper:"A4", orient:"portrait", pad:14,
-  padTop:14, padBottom:14, padLeft:14, padRight:14,
-  title:"Палитра раскраски", subtitle:"", titleFont:"'Great Vibes', cursive", titleSize:30, titleAlign:"center",
-  sticker:true, stickerW:70, stickerH:26,
-  fields:["Тема","Дата","Номер страницы","Заметки"], fieldFont:"Caveat, cursive", fieldSize:14,
-  cols:3, rows:10, boxH:11, sqW:11, sqH:11, rectW:22, rectH:11, boxGap:4, boxR:2,
-  punch:false, punchN:4, punchSide:"left", punchD:5, punchMargin:8, punchDist:"custom", punchGaps:"45, 65, 45",
-  sheetPaper:"A4", copies:1, layout:"single", showGuides:false, cutLine:true,
-  pageType:"tracker", divImage:"", divFit:"contain", divBackTitle:"Отметь готовые раскраски",
-  divCount:30, divCols:6, divCircle:12, divNumbered:true,
-  divPadTop:0, divPadRight:0, divPadBottom:0, divPadLeft:0,
-  font:"Montserrat, Arial, sans-serif", lineColor:"#cbb6c2", textColor:"#6b5563", accent:"#e59ab5"
-};
-
-let state = {
-  mode: "strips",
-  tracker: {...DEFAULT_TRACKER},
-  markers: [],
-  sets: [],
-  design: {...DEFAULT_DESIGN},
-  zoom: 0.7
-};
-
-/* ---------- persistence ---------- */
-const LS = "palette_app_v1";
-function save(){
-  try{
-    localStorage.setItem(LS, JSON.stringify({markers:state.markers, sets:state.sets, design:state.design, tracker:state.tracker, mode:state.mode}));
-  }catch(e){ /* переполнение (обычно большая картинка) — работа в памяти продолжается */ }
+// перенос старых сохранений (v1) на новые поля
+function migrateDesign(dd){
+  dd={...dd};
+  if(dd.mT===undefined){ const p=dd.pad??10; dd.mT=dd.mR=dd.mB=dd.mL=p; }
+  if(dd.gapX===undefined){ const g=dd.gap??0; dd.gapX=dd.gapY=g; }
+  if(typeof dd.border==="boolean") dd.border=dd.border?"solid":"none";
+  if(dd.vlineW===undefined && dd.lineW!==undefined) dd.vlineW=Math.round(dd.lineW*PX*100)/100;
+  if(dd.codeIndent===undefined){ dd.codeIndent=Math.max(10,dd.textIndent||14); dd.nameIndent=dd.codeIndent+20; }
+  delete dd.pad; delete dd.gap; delete dd.lineW; delete dd.textIndent;
+  return {...DEFAULT_DESIGN,...dd};
+}
+function migrateTracker(t,v){
+  t={...t};
+  if(t.padTop===undefined && t.pad!==undefined) t.padTop=t.padBottom=t.padLeft=t.padRight=t.pad;
+  if(t.sqH===undefined){ const bh=t.boxH||11; t.sqH=bh; t.rectH=bh; }
+  if(!v && t.boxR!==undefined) t.boxR=Math.round(t.boxR*PX*10)/10; // раньше было в пикселях
+  if(!Array.isArray(t.fields)) t.fields=DEFAULT_TRACKER.fields.slice();
+  return {...DEFAULT_TRACKER,...t};
 }
 function load(){
   try{
-    const raw = localStorage.getItem(LS);
-    if(raw){
-      const d = JSON.parse(raw);
-      state.markers = d.markers||[];
-      state.sets = d.sets||[];
-      const dd = d.design||{};
-      // миграция: сохранения без раздельных сдвигов кода/названия получают их
-      // из старого общего сдвига текста (textIndent)
-      if(dd.codeIndent===undefined){
-        dd.codeIndent = Math.max(10, dd.textIndent||14);
-        dd.nameIndent = dd.codeIndent+20;
-      }
-      state.design = {...DEFAULT_DESIGN, ...dd};
-      if(d.tracker){
-        state.tracker = {...DEFAULT_TRACKER, ...d.tracker};
-        // миграция: старый общий отступ → четыре стороны
-        if(d.tracker.padTop===undefined && d.tracker.pad!==undefined){
-          const p=d.tracker.pad;
-          state.tracker.padTop=state.tracker.padBottom=state.tracker.padLeft=state.tracker.padRight=p;
-        }
-        // миграция: высота квадрата/прямоугольника из общей высоты клетки
-        if(d.tracker.sqH===undefined){
-          const bh=d.tracker.boxH||11;
-          state.tracker.sqH=bh; state.tracker.rectH=bh;
-        }
-      }
-      if(d.mode) state.mode = d.mode;
-    }
-  }catch(e){}
+    const raw=localStorage.getItem(LS); if(!raw) return;
+    const d=JSON.parse(raw);
+    state.markers=(d.markers||[]).map(m=>({id:m.id||uid(),code:m.code||"",name:m.name||""}));
+    state.sets=(d.sets||[]).map(s=>({id:s.id||uid(),name:s.name||"Набор",markers:s.markers||[]}));
+    state.design=migrateDesign(d.design||{});
+    state.tracker=migrateTracker(d.tracker||{},d.v);
+    state.print={...DEFAULT_PRINT,...(d.print||{})};
+    if(d.mode) state.mode=d.mode;
+    if(d.labelMode) state.labelMode=d.labelMode;
+    if(d.tab) state.tab={...state.tab,...d.tab};
+  }catch(e){ console.warn(e); }
 }
 
-/* ---------- theme ---------- */
-function applyTheme(t){
-  document.body.dataset.theme = t;
-  $("#btnTheme").textContent = t==="dark" ? "☀️" : "🌙";
-  localStorage.setItem("palette_theme", t);
-}
-function initTheme(){
-  const saved = localStorage.getItem("palette_theme");
-  const prefers = matchMedia("(prefers-color-scheme: dark)").matches ? "dark":"light";
-  applyTheme(saved || prefers);
-}
-
-/* ---------- toast ---------- */
+/* ---------- мелочи ---------- */
 let toastT;
-function toast(msg){
-  const t=$("#toast"); t.textContent=msg; t.classList.add("show");
-  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2200);
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
+function applyTheme(t){ document.body.dataset.theme=t; try{localStorage.setItem("palette_theme",t);}catch(e){} }
+function modal({title,html="",buttons=[{label:"Закрыть"}],onOpen}){
+  $("#modalTitle").textContent=title; $("#modalBody").innerHTML=html;
+  const foot=$("#modalFoot"); foot.innerHTML="";
+  buttons.forEach(b=>{ const el=document.createElement("button"); el.className="btn"+(b.primary?" primary":"");
+    el.textContent=b.label; el.onclick=()=>{ if(b.onClick && b.onClick()===false) return; closeModal(); }; foot.appendChild(el); });
+  $("#modalBg").classList.add("show"); onOpen&&onOpen($("#modalBody"));
+}
+function closeModal(){ $("#modalBg").classList.remove("show"); }
+function download(blob,name){
+  const url=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),15000);
+}
+function pickFile(accept){ return new Promise(res=>{ const inp=$("#fileInput"); inp.accept=accept; inp.value="";
+  inp.onchange=()=>res(inp.files[0]||null); inp.click(); }); }
+const readAs=(f,how)=>new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; how==="text"?r.readAsText(f):r.readAsDataURL(f); });
+// уменьшаем фото, чтобы оно поместилось в память браузера (печать остаётся чёткой: 2400 px ≈ 290 dpi на A4)
+async function loadImageFile(f,maxPx=2400){
+  const url=await readAs(f,"url");
+  if(/svg/.test(f.type)) return url;
+  const im=await new Promise(r=>{const i=new Image(); i.onload=()=>r(i); i.onerror=()=>r(null); i.src=url;});
+  if(!im) return url;
+  const k=Math.min(1,maxPx/Math.max(im.naturalWidth,im.naturalHeight));
+  if(k===1 && url.length<1.5e6) return url;
+  const cv=document.createElement("canvas"); cv.width=Math.round(im.naturalWidth*k); cv.height=Math.round(im.naturalHeight*k);
+  const ctx=cv.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height); ctx.drawImage(im,0,0,cv.width,cv.height);
+  return cv.toDataURL("image/jpeg",0.9);
 }
 
-/* ---------- markers ---------- */
-function addMarker(code,name){
-  code=(code||"").trim(); name=(name||"").trim();
-  if(!code && !name){ toast("Введите код или название"); return; }
-  state.markers.push({id:uid(),code,name});
-  save(); renderMarkers(); renderSheet();
-}
-function removeMarker(id){
-  state.markers = state.markers.filter(m=>m.id!==id);
-  save(); renderMarkers(); renderSheet();
-}
-function renderMarkers(){
-  const box=$("#mklist"); box.innerHTML="";
-  $("#mkCount").textContent = state.markers.length ? `(${state.markers.length})` : "";
-  if(!state.markers.length){
-    box.innerHTML='<div class="hint">Пусто. Добавьте маркеры вручную или примените набор.</div>';
-    return;
-  }
-  state.markers.forEach((m,i)=>{
-    const el=document.createElement("div");
-    el.className="mkitem"; el.draggable=true; el.dataset.i=i;
-    el.innerHTML=`<span class="grip">⋮⋮</span>
-      <span class="code" title="Нажмите, чтобы изменить">${escapeHtml(m.code)||"—"}</span>
-      <span class="name" title="Нажмите, чтобы изменить">${escapeHtml(m.name)||"—"}</span>
-      <button class="btn danger small" title="Удалить">✕</button>`;
-    el.querySelector("button").onclick=()=>removeMarker(m.id);
-    // клик по коду/названию — инлайн-редактирование
-    [["code","code"],["name","name"]].forEach(([cls,field])=>{
-      const span=el.querySelector("."+cls);
-      span.onclick=()=>{
-        el.draggable=false;
-        const inp=document.createElement("input");
-        inp.type="text"; inp.className="edit"; inp.value=m[field]||"";
-        span.replaceWith(inp);
-        inp.focus(); inp.select();
-        let done=false;
-        const commit=(cancel)=>{
-          if(done) return; done=true;
-          if(!cancel){ m[field]=inp.value.trim(); save(); }
-          renderMarkers(); renderSheet();
-        };
-        inp.onblur=()=>commit(false);
-        inp.onkeydown=ev=>{
-          if(ev.key==="Enter") commit(false);
-          else if(ev.key==="Escape") commit(true);
-        };
-      };
-    });
-    el.addEventListener("dragstart",e=>{el.classList.add("drag");e.dataTransfer.setData("text",i)});
-    el.addEventListener("dragend",()=>el.classList.remove("drag"));
-    el.addEventListener("dragover",e=>e.preventDefault());
-    el.addEventListener("drop",e=>{
-      e.preventDefault();
-      const from=+e.dataTransfer.getData("text"), to=i;
-      const arr=state.markers; const [it]=arr.splice(from,1); arr.splice(to,0,it);
-      save(); renderMarkers(); renderSheet();
-    });
-    box.appendChild(el);
-  });
-}
+/* =========================================================
+   Конструктор форм: поля описываются схемой, привязка — автоматически
+   ========================================================= */
+const num=(key,label,min,max,step=1,unit="мм",x={})=>({t:"num",key,label,min,max,step,unit,...x});
+const sel=(key,label,opts,x={})=>({t:"sel",key,label,opts,...x});
+const seg=(key,label,opts,x={})=>({t:"seg",key,label,opts,...x});
+const tog=(key,label,x={})=>({t:"tog",key,label,...x});
+const col=(key,label)=>({t:"col",key,label});
+const txt=(key,label,ph="",x={})=>({t:"txt",key,label,ph,...x});
+const area=(key,label,ph="",x={})=>({t:"area",key,label,ph,...x});
+const font=(key,label)=>({t:"font",key,label});
+const sides=(keys,label,link,max=60)=>({t:"sides",keys,label,link,max});
+const row=(...fields)=>({t:"row",fields});
+const chips=(label,items)=>({t:"chips",label,items});
+const custom=(build)=>({t:"custom",build});
+const PAPERS=[["A4","A4 · 210×297"],["A5","A5 · 148×210"],["A6","A6 · 105×148"],["A3","A3 · 297×420"],["Letter","Letter"],["custom","Свой размер"]];
+const ORIENT=[["portrait","Книжная"],["landscape","Альбомная"]];
 
-/* ---------- sets ---------- */
-function saveSet(){
-  const name=$("#setName").value.trim();
-  if(!name){ toast("Название набора?"); return; }
-  if(!state.markers.length){ toast("Список маркеров пуст"); return; }
-  state.sets.push({id:uid(),name,markers:JSON.parse(JSON.stringify(state.markers))});
-  $("#setName").value="";
-  save(); renderSets(); toast("Набор сохранён");
-}
-function applySet(id,append){
-  const s=state.sets.find(x=>x.id===id); if(!s) return;
-  const copy=JSON.parse(JSON.stringify(s.markers)).map(m=>({...m,id:uid()}));
-  state.markers = append ? state.markers.concat(copy) : copy;
-  save(); renderMarkers(); renderSheet();
-  toast(append?"Добавлено в список":"Набор применён");
-}
-function deleteSet(id){
-  state.sets=state.sets.filter(x=>x.id!==id);
-  save(); renderSets();
-}
-function renderSets(){
-  const box=$("#setlist"); box.innerHTML="";
-  $("#setCount").textContent = state.sets.length ? `(${state.sets.length})` : "";
-  if(!state.sets.length){ box.innerHTML='<div class="hint">Наборов пока нет.</div>'; return; }
-  state.sets.forEach(s=>{
-    const el=document.createElement("div");
-    el.className="setitem";
-    el.innerHTML=`<div class="top"><span class="nm">${escapeHtml(s.name)}</span>
-        <button class="btn danger small">✕</button></div>
-      <div class="meta">${s.markers.length} маркеров</div>
-      <div class="acts">
-        <button class="btn small primary" data-a="apply">Применить</button>
-        <button class="btn small" data-a="append">＋ Добавить</button>
-      </div>`;
-    el.querySelector(".btn.danger").onclick=()=>deleteSet(s.id);
-    el.querySelector('[data-a=apply]').onclick=()=>applySet(s.id,false);
-    el.querySelector('[data-a=append]').onclick=()=>applySet(s.id,true);
-    box.appendChild(el);
-  });
-}
-
-/* ---------- design bindings ---------- */
-const CHIPS = [["#cCodeB","codeBold"],["#cCodeI","codeItalic"],["#cNameB","nameBold"],["#cNameI","nameItalic"]];
-function bindDesign(){
-  const d=state.design;
-  const set=(id,val)=>{const e=$(id); if(e){ if(e.type==="checkbox") e.checked=val; else e.value=val; }};
-  set("#dPaper",d.paper); set("#dOrient",d.orient); set("#dCols",d.cols); set("#dPad",d.pad);
-  set("#dRow",d.rowH); set("#dStripW",d.stripW); set("#dGap",d.gap);
-  set("#dCode",d.showCode); set("#dNameShow",d.showName);
-  set("#dBorder",d.border); set("#dCorner",d.corner); set("#dFont",d.font); set("#dFs",d.fs);
-  set("#dSpotShape",d.spotShape); set("#dSpots",d.spots);
-  set("#dSpotSize",d.spotSize); set("#dSpotIndent",d.spotIndent);
-  set("#dCodeIndent",d.codeIndent); set("#dNameIndent",d.nameIndent);
-  set("#dRing",d.ring); set("#dRingSize",d.ringSize); set("#dRingIndent",d.ringIndent);
-  set("#dLine",d.line); set("#dLineX",d.lineX); set("#dLineW",d.lineW);
-  set("#dLineColor",d.lineColor); set("#dTextColor",d.textColor);
-  set("#dBgFit",d.bgFit); set("#dBgOpacity",d.bgOpacity); set("#dBgSize",d.bgSize);
-  set("#dBgPosX",d.bgPosX); set("#dBgPosY",d.bgPosY); set("#dBgRotate",d.bgRotate);
-  CHIPS.forEach(([sel,key])=>$(sel).classList.toggle("on",!!d[key]));
-  updateBgUI();
-  updateRangeLabels();
-}
-function readDesign(){
-  const d=state.design;
-  const g=(id)=>$(id);
-  d.paper=g("#dPaper").value; d.orient=g("#dOrient").value;
-  d.cols=+g("#dCols").value; d.pad=+g("#dPad").value;
-  d.rowH=+g("#dRow").value; d.stripW=+g("#dStripW").value; d.gap=+g("#dGap").value;
-  d.showCode=g("#dCode").checked; d.showName=g("#dNameShow").checked;
-  d.border=g("#dBorder").checked; d.corner=+g("#dCorner").value; d.font=g("#dFont").value; d.fs=+g("#dFs").value;
-  d.spotShape=g("#dSpotShape").value; d.spots=+g("#dSpots").value;
-  d.spotSize=+g("#dSpotSize").value; d.spotIndent=+g("#dSpotIndent").value;
-  d.codeIndent=+g("#dCodeIndent").value; d.nameIndent=+g("#dNameIndent").value;
-  d.ring=g("#dRing").checked; d.ringSize=+g("#dRingSize").value; d.ringIndent=+g("#dRingIndent").value;
-  d.line=g("#dLine").checked; d.lineX=+g("#dLineX").value; d.lineW=+g("#dLineW").value;
-  d.lineColor=g("#dLineColor").value; d.textColor=g("#dTextColor").value;
-  d.bgFit=g("#dBgFit").value; d.bgOpacity=+g("#dBgOpacity").value; d.bgSize=+g("#dBgSize").value;
-  d.bgPosX=+g("#dBgPosX").value; d.bgPosY=+g("#dBgPosY").value; d.bgRotate=+g("#dBgRotate").value;
-  updateRangeLabels(); save(); renderSheet();
-}
-function renderBgPresets(){
-  const box=$("#bgPresets"); box.innerHTML="";
-  PRESET_PATTERNS.forEach(p=>{
-    const uri=patternUri(p.svg);
-    const b=document.createElement("button");
-    b.title=p.name; b._uri=uri;
-    b.style.backgroundImage=`url("${uri}")`;
-    b.style.backgroundSize=Math.round(p.size*0.7)+"px";
-    b.onclick=()=>{
-      state.design.bgImage=uri; state.design.bgFit="tile"; state.design.bgTilePx=p.size;
-      if(state.design.bgSize<20) state.design.bgSize=100;
-      save(); bindDesign(); renderSheet();
-    };
-    box.appendChild(b);
-  });
-}
-function updateBgUI(){
-  const d=state.design, has=!!d.bgImage;
-  $("#bgEmpty").style.display = has ? "none" : "";
-  $("#bgLoaded").style.display = has ? "" : "none";
-  if(has) $("#bgThumb").src=d.bgImage;
-  document.querySelectorAll("#bgModeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.v===d.bgMode));
-  document.querySelectorAll("#bgPresets button").forEach(b=>b.classList.toggle("on",b._uri===d.bgImage));
-}
-function updateDivUI(){
-  const t=state.tracker, has=!!t.divImage;
-  if(!$("#divEmpty")) return;
-  $("#divEmpty").style.display = has ? "none" : "";
-  $("#divLoaded").style.display = has ? "" : "none";
-  if(has) $("#divThumb").src=t.divImage;
-}
-function setPageType(v){
-  state.tracker.pageType=v; save();
-  document.querySelectorAll("#pageTypeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
-  document.querySelectorAll("#trackerDesign .dtype-tracker").forEach(c=>c.style.display = v==="divider"?"none":"");
-  const dc=$("#dividerCard"); if(dc) dc.style.display = v==="divider"?"":"none";
-  renderSheet(); fitWidth();
-}
-function updateSliderFills(){
-  document.querySelectorAll('input[type=range]').forEach(el=>{
-    const min=+el.min||0, max=+el.max||100, v=+el.value;
-    el.style.setProperty('--fill', ((v-min)/(max-min)*100)+'%');
-  });
-}
-function updateRangeLabels(){
-  updateSliderFills();
-  const d=state.design;
-  $("#vCols").textContent=d.cols; $("#vPad").textContent=d.pad+" мм";
-  $("#vRow").textContent=d.rowH+" мм";
-  $("#vStripW").textContent=d.stripW>0?d.stripW+" мм":"авто";
-  $("#vGap").textContent=d.gap+" мм";
-  $("#vCorner").textContent=d.corner+" мм";
-  $("#vFs").textContent=d.fs+" pt"; $("#vSpots").textContent=d.spots;
-  $("#vCodeIndent").textContent=d.codeIndent+" мм";
-  $("#vNameIndent").textContent=d.nameIndent+" мм";
-  $("#vSpotIndent").textContent=d.spotIndent+" мм";
-  $("#vSpotSize").textContent=d.spotSize+" мм"; $("#vRingSize").textContent=d.ringSize+" мм";
-  $("#vRingIndent").textContent=d.ringIndent+" мм";
-  $("#dLineXNum").value=d.lineX; $("#vLineW").textContent=d.lineW+" px";
-  $("#vBgOpacity").textContent=d.bgOpacity+"%"; $("#vBgSize").textContent=d.bgSize+"%";
-  $("#vBgPosX").textContent=d.bgPosX+"%"; $("#vBgPosY").textContent=d.bgPosY+"%";
-  $("#vBgRotate").textContent=d.bgRotate+"°";
-}
-
-/* ---------- render sheet ---------- */
-function spotHtml(){
-  const d=state.design;
-  const sz=d.spotSize*MM;
-  const round = d.spotShape==="circle" ? "50%" : (d.corner*MM*0.4+2)+"px";
-  return `<span class="spot" style="width:${sz}px;height:${sz}px;
-    border-radius:${round};background:#fff;border:1px dashed ${d.lineColor};display:inline-block"></span>`;
-}
-function spotsBlock(){
-  const d=state.design;
-  if(d.spots<=0) return "";
-  let s=""; for(let i=0;i<d.spots;i++) s+=spotHtml();
-  return `<span class="spots" style="position:absolute;left:${d.spotIndent*MM}px;top:50%;transform:translateY(-50%)">${s}</span>`;
-}
-function ringHtml(){
-  const d=state.design;
-  if(!d.ring) return "";
-  const sz=d.ringSize*MM;
-  return `<span class="ring" title="отверстие под кольцо" style="position:absolute;right:${d.ringIndent*MM}px;top:50%;transform:translateY(-50%);
-    width:${sz}px;height:${sz}px;border-radius:50%;
-    border:1px dashed ${d.lineColor};background:#fff;display:inline-block"></span>`;
-}
-function fontStyle(bold,italic){
-  return `font-weight:${bold?700:400};font-style:${italic?"italic":"normal"}`;
-}
-function lineHtml(){
-  const d=state.design;
-  if(!d.line) return "";
-  return `<span class="vline" style="position:absolute;left:${d.lineX*MM}px;top:0;bottom:0;
-      width:${d.lineW}px;background:${d.lineColor};pointer-events:none"></span>`;
-}
-function bgLayerCss(){
-  const d=state.design;
-  const r=d.bgRotate||0;
-  let size, repeat, pos=`${d.bgPosX}% ${d.bgPosY}%`;
-  if(d.bgFit==="tile"){
-    const tile=Math.max(4,(d.bgTilePx||60)*d.bgSize/100);
-    size=`${tile}px auto`; repeat="repeat";
-  }else if(d.bgFit==="cover"){ size=(d.bgSize===100?"cover":`${d.bgSize}% auto`); repeat="no-repeat"; }
-  else if(d.bgFit==="contain"){ size="contain"; repeat="no-repeat"; }
-  else { size="100% 100%"; repeat="no-repeat"; } // stretch
-  // при повороте слой увеличиваем и центрируем, чтобы углы ленточки не оголялись
-  const box = r
-    ? `left:-75%;top:-75%;right:auto;bottom:auto;width:250%;height:250%;transform-origin:center;transform:rotate(${r}deg);`
-    : `left:0;top:0;right:0;bottom:0;width:auto;height:auto;transform:none;`;
-  return `${box}background-image:url('${d.bgImage}');background-size:${size};`
-    +`background-repeat:${repeat};background-position:${pos};opacity:${d.bgOpacity/100}`;
-}
-function cellHtml(m, collapse, idx){
-  const d=state.design;
-  const spots = spotsBlock();
-  const anchor = `position:absolute;top:50%;transform:translateY(-50%);white-space:nowrap`;
-  let txt="";
-  if(d.showCode) txt+=`<span class="c-code" style="${anchor};left:${d.codeIndent*MM}px;color:${d.textColor};${fontStyle(d.codeBold,d.codeItalic)}">${escapeHtml(m.code||"")}</span>`;
-  if(d.showName) txt+=`<span class="c-name" style="${anchor};left:${d.nameIndent*MM}px;${fontStyle(d.nameBold,d.nameItalic)}">${escapeHtml(m.name||"")}</span>`;
-  // схлопывание границ: соседние ленточки делят одну линию (без двойной толщины)
-  let border;
-  if(!d.border) border="border:1px solid transparent";
-  else if(collapse) border=`border-right:1px solid ${d.lineColor};border-bottom:1px solid ${d.lineColor}`;
-  else border=`border:1px solid ${d.lineColor}`;
-  const cellBg = (d.bgImage && d.bgMode==="cell")
-    ? `<span class="cell-bg" style="${bgLayerCss()}"></span>` : "";
-  return `<div class="cell" data-i="${idx}" style="${border};border-radius:${d.corner*MM}px;position:relative;
-      height:${d.rowH*MM}px;font-family:${d.font};font-size:${d.fs}pt;color:${d.textColor}">
-      ${cellBg}${lineHtml()}${spots}${txt}${ringHtml()}
-    </div>`;
-}
-/* ---------- трекер ---------- */
-function bindTracker(){
-  const t=state.tracker, S=(id,v)=>{const e=$(id); if(!e)return; if(e.type==="checkbox")e.checked=v; else e.value=v;};
-  ["#tTitleFont","#tFieldFont","#tFont"].forEach(id=>{ if($(id) && !$(id).options.length) fillFontSelect($(id)); });
-  S("#tPaper",t.paper); S("#tOrient",t.orient);
-  S("#tPadTop",t.padTop); S("#tPadBottom",t.padBottom); S("#tPadLeft",t.padLeft); S("#tPadRight",t.padRight);
-  S("#tTitle",t.title); S("#tSubtitle",t.subtitle); S("#tTitleFont",t.titleFont);
-  S("#tTitleSize",t.titleSize); S("#tTitleAlign",t.titleAlign);
-  S("#tSticker",t.sticker); S("#tStickerW",t.stickerW); S("#tStickerH",t.stickerH);
-  S("#tFields",t.fields.join("\n")); S("#tFieldFont",t.fieldFont); S("#tFieldSize",t.fieldSize);
-  S("#tCols",t.cols); S("#tRows",t.rows); S("#tBoxGap",t.boxGap); S("#tBoxR",t.boxR);
-  S("#tSqW",t.sqW); S("#tSqH",t.sqH); S("#tRectW",t.rectW); S("#tRectH",t.rectH);
-  S("#tLayout",t.layout); S("#tGuides",t.showGuides); S("#tCutLine",t.cutLine);
-  S("#divFit",t.divFit); S("#divBackTitle",t.divBackTitle); S("#divCount",t.divCount);
-  S("#divCols",t.divCols); S("#divCircle",t.divCircle); S("#divNumbered",t.divNumbered);
-  S("#divPadTop",t.divPadTop); S("#divPadBottom",t.divPadBottom); S("#divPadLeft",t.divPadLeft); S("#divPadRight",t.divPadRight);
-  updateDivUI();
-  const single=t.layout==="single";
-  if($("#tPaperWrap")) $("#tPaperWrap").style.display = single ? "" : "none";
-  S("#tPunch",t.punch); S("#tPunchN",t.punchN); S("#tPunchSide",t.punchSide); S("#tPunchD",t.punchD); S("#tPunchM",t.punchMargin);
-  S("#tPunchDist",t.punchDist); S("#tPunchGaps",t.punchGaps);
-  const gw=$("#tPunchGapsWrap"); if(gw) gw.style.display = t.punchDist==="custom" ? "" : "none";
-  S("#tFont",t.font); S("#tLineColor",t.lineColor); S("#tTextColor",t.textColor); S("#tAccent",t.accent);
-  updateTrackerLabels();
-}
-function readTracker(){
-  const t=state.tracker, g=id=>$(id);
-  t.paper=g("#tPaper").value; t.orient=g("#tOrient").value;
-  t.padTop=+g("#tPadTop").value; t.padBottom=+g("#tPadBottom").value; t.padLeft=+g("#tPadLeft").value; t.padRight=+g("#tPadRight").value;
-  t.title=g("#tTitle").value; t.subtitle=g("#tSubtitle").value; t.titleFont=g("#tTitleFont").value;
-  t.titleSize=+g("#tTitleSize").value; t.titleAlign=g("#tTitleAlign").value;
-  t.sticker=g("#tSticker").checked; t.stickerW=+g("#tStickerW").value; t.stickerH=+g("#tStickerH").value;
-  t.fields=g("#tFields").value.split("\n").map(s=>s.trim()).filter(Boolean);
-  t.fieldFont=g("#tFieldFont").value; t.fieldSize=+g("#tFieldSize").value;
-  t.cols=+g("#tCols").value; t.rows=+g("#tRows").value; t.boxGap=+g("#tBoxGap").value; t.boxR=+g("#tBoxR").value;
-  t.sqW=+g("#tSqW").value; t.sqH=+g("#tSqH").value; t.rectW=+g("#tRectW").value; t.rectH=+g("#tRectH").value;
-  t.layout=g("#tLayout").value; t.showGuides=g("#tGuides").checked; t.cutLine=g("#tCutLine").checked;
-  t.divFit=g("#divFit").value; t.divBackTitle=g("#divBackTitle").value; t.divCount=+g("#divCount").value;
-  t.divCols=+g("#divCols").value; t.divCircle=+g("#divCircle").value; t.divNumbered=g("#divNumbered").checked;
-  t.divPadTop=+g("#divPadTop").value; t.divPadBottom=+g("#divPadBottom").value; t.divPadLeft=+g("#divPadLeft").value; t.divPadRight=+g("#divPadRight").value;
-  const single=t.layout==="single";
-  if($("#tPaperWrap")) $("#tPaperWrap").style.display = single ? "" : "none";
-  t.punch=g("#tPunch").checked; t.punchN=+g("#tPunchN").value; t.punchSide=g("#tPunchSide").value; t.punchD=+g("#tPunchD").value; t.punchMargin=+g("#tPunchM").value;
-  t.punchDist=g("#tPunchDist").value; t.punchGaps=g("#tPunchGaps").value;
-  const gw=$("#tPunchGapsWrap"); if(gw) gw.style.display = t.punchDist==="custom" ? "" : "none";
-  t.font=g("#tFont").value; t.lineColor=g("#tLineColor").value; t.textColor=g("#tTextColor").value; t.accent=g("#tAccent").value;
-  updateTrackerLabels(); save(); renderSheet();
-}
-function updateTrackerLabels(){
-  updateSliderFills(); const t=state.tracker;
-  $("#vtPadTop").textContent=t.padTop+" мм"; $("#vtPadBottom").textContent=t.padBottom+" мм";
-  $("#vtPadLeft").textContent=t.padLeft+" мм"; $("#vtPadRight").textContent=t.padRight+" мм";
-  $("#vtTitleSize").textContent=t.titleSize+" pt";
-  $("#vtStickerW").textContent=t.stickerW+" мм"; $("#vtStickerH").textContent=t.stickerH+" мм";
-  $("#vtFieldSize").textContent=t.fieldSize+" pt"; $("#vtCols").textContent=t.cols; $("#vtRows").textContent=t.rows;
-  $("#vtBoxGap").textContent=t.boxGap+" мм"; $("#vtBoxR").textContent=t.boxR+" px";
-  $("#vtSqW").textContent=t.sqW+" мм"; $("#vtSqH").textContent=t.sqH+" мм";
-  $("#vtRectW").textContent=t.rectW+" мм"; $("#vtRectH").textContent=t.rectH+" мм";
-  $("#vtPunchN").textContent=t.punchN; $("#vtPunchD").textContent=t.punchD+" мм"; $("#vtPunchM").textContent=t.punchMargin+" мм";
-  if($("#vdivCount")){ $("#vdivCount").textContent=t.divCount; $("#vdivCols").textContent=t.divCols; $("#vdivCircle").textContent=t.divCircle+" мм";
-    $("#vdivPadTop").textContent=t.divPadTop+" мм"; $("#vdivPadBottom").textContent=t.divPadBottom+" мм";
-    $("#vdivPadLeft").textContent=t.divPadLeft+" мм"; $("#vdivPadRight").textContent=t.divPadRight+" мм"; }
-}
-// позиции центров отверстий (мм) вдоль края длиной along (мм)
-function punchPositions(along){
-  const t=state.tracker, n=t.punchN, d=t.punchD;
-  const edge=t.punchSide==="left"?Math.min(t.padTop,t.padBottom):Math.min(t.padLeft,t.padRight);
-  if(t.punchDist==="even"){
-    const start=Math.max(edge,d), end=along-Math.max(edge,d);
-    return Array.from({length:n},(_,i)=> n===1?(start+end)/2 : start+(end-start)*i/(n-1));
-  }
-  // свой шаг: n-1 промежутков, группа центрируется по краю
-  let gaps=String(t.punchGaps||"").split(/[,\s]+/).map(parseFloat).filter(v=>!isNaN(v)&&v>0);
-  if(!gaps.length) gaps=[45];
-  const g=[]; for(let i=0;i<n-1;i++) g.push(gaps[Math.min(i,gaps.length-1)]);
-  const total=g.reduce((a,b)=>a+b,0);
-  let cur=(along-total)/2; const pos=[cur];
-  g.forEach(gap=>{ cur+=gap; pos.push(cur); });
-  return pos;
-}
-// раскладка на листе: пресет определяет физический лист, сетку страниц и линию реза
-function trackerLayout(){
-  const t=state.tracker;
-  if(t.layout==="2a5")   return {sheetW:297, sheetH:210, cols:2, rows:1, cut:"v",     paperCss:"A4", orient:"landscape", pages:2};
-  if(t.layout==="2a5v")  return {sheetW:210, sheetH:297, cols:1, rows:2, cut:"h",     paperCss:"A4", orient:"portrait",  pages:2};
-  if(t.layout==="4a6")   return {sheetW:210, sheetH:297, cols:2, rows:2, cut:"cross", paperCss:"A4", orient:"portrait",  pages:4};
-  // одна страница — по «Формат» + «Ориентация»
-  const p=PAPER[t.paper]; let w=p.w,h=p.h; if(t.orient==="landscape")[w,h]=[h,w];
-  return {sheetW:w, sheetH:h, cols:1, rows:1, cut:null, paperCss:t.paper, orient:t.orient, pages:1};
-}
-// физический лист печати (для fitWidth и @page)
-function trackerSheet(){
-  const t=state.tracker;
-  if(t.pageType==="divider"){
-    const p=PAPER[t.paper]; let w=p.w,h=p.h; if(t.orient==="landscape")[w,h]=[h,w];
-    return {key:t.paper, w, h, orient:t.orient};
-  }
-  const L=trackerLayout();
-  return {key:L.paperCss, w:L.sheetW, h:L.sheetH, orient:L.orient};
-}
-// HTML лицевой стороны разделителя (картинка) размером w×h мм
-function divFrontHtml(w,h){
-  const t=state.tracker, padCss=`${t.divPadTop*MM}px ${t.divPadRight*MM}px ${t.divPadBottom*MM}px ${t.divPadLeft*MM}px`;
-  const img = t.divImage
-    ? `<img src="${t.divImage}" style="width:100%;height:100%;object-fit:${t.divFit==="cover"?"cover":"contain"};display:block">`
-    : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:${t.lineColor};border:1.5px dashed ${t.lineColor};border-radius:8px;font-family:${t.font};font-size:${t.fieldSize}pt">Загрузите картинку раскраски</div>`;
-  return `<div style="position:relative;width:${w*MM}px;height:${h*MM}px;padding:${padCss};overflow:hidden;background:#fff;box-sizing:border-box">${img}</div>`;
-}
-// HTML оборотной стороны разделителя (кружки с номерами)
-function divBackHtml(w,h){
-  const t=state.tracker, padCss=`${t.padTop*MM}px ${t.padRight*MM}px ${t.padBottom*MM}px ${t.padLeft*MM}px`;
-  const title = t.divBackTitle
-    ? `<div style="text-align:center;font-family:${t.titleFont};font-size:${Math.max(14,t.titleSize*0.7)}pt;margin-bottom:${4*MM}px">${escapeHtml(t.divBackTitle)}</div>`:"";
-  const sz=t.divCircle*MM;
-  let circles="";
-  for(let i=1;i<=t.divCount;i++){
-    circles+=`<div style="width:${sz}px;height:${sz}px;border-radius:50%;border:1px solid ${t.lineColor};
-      display:flex;align-items:center;justify-content:center;color:${t.textColor};
-      font-family:${t.font};font-size:${Math.max(6,t.divCircle*0.42)}pt">${t.divNumbered?i:""}</div>`;
-  }
-  const grid=`<div style="display:grid;grid-template-columns:repeat(${t.divCols},1fr);gap:${3*MM}px;justify-items:center">${circles}</div>`;
-  return `<div style="position:relative;width:${w*MM}px;height:${h*MM}px;padding:${padCss};overflow:hidden;background:#fff;box-sizing:border-box;font-family:${t.font};color:${t.textColor}">${title}${grid}</div>`;
-}
-function renderDivider(){
-  const t=state.tracker, p=PAPER[t.paper];
-  let w=p.w,h=p.h; if(t.orient==="landscape")[w,h]=[h,w];
-  $("#pageStyle").textContent=`@page{size:${t.paper==="Letter"?"letter":t.paper} ${t.orient};margin:0}`;
-  $("#sheetWrap").innerHTML=
-    `<div class="sheet-cap">Лицевая сторона</div>`
-    +`<div class="sheet" style="position:relative;width:${w*MM}px;height:${h*MM}px">${divFrontHtml(w,h)}</div>`
-    +`<div class="sheet-cap">Оборотная сторона</div>`
-    +`<div class="sheet" style="position:relative;width:${w*MM}px;height:${h*MM}px">${divBackHtml(w,h)}</div>`;
-  $("#pageInfo").textContent="Разделитель · 2 стороны";
-  applyZoom();
-}
-// HTML одной единицы трекера размером uw×uh мм
-function trackerUnitHtml(uw,uh,cut){
-  const t=state.tracker;
-  const padCss=`${t.padTop*MM}px ${t.padRight*MM}px ${t.padBottom*MM}px ${t.padLeft*MM}px`;
-  const titleHtml = t.title ? `<div class="tguide" style="text-align:${t.titleAlign};font-family:${t.titleFont};font-size:${t.titleSize}pt;line-height:1.1">${escapeHtml(t.title)}</div>`:"";
-  const subHtml = t.subtitle ? `<div style="text-align:${t.titleAlign};font-family:${t.fieldFont};font-size:${t.fieldSize+2}pt;color:${t.accent};margin-top:1mm">${escapeHtml(t.subtitle)}</div>`:"";
-  const fieldsHtml = t.fields.map(f=>`<div style="display:flex;align-items:flex-end;gap:${2*MM}px;margin-bottom:${t.fieldSize*0.6}px">
-      <span style="font-family:${t.fieldFont};font-size:${t.fieldSize}pt;white-space:nowrap">${escapeHtml(f)}</span>
-      <span style="flex:1;border-bottom:1px solid ${t.lineColor};height:${t.fieldSize}pt"></span></div>`).join("");
-  const stWmm=Math.min(t.stickerW, uw-t.padLeft-t.padRight);
-  const sticker = t.sticker ? `<div style="flex:0 0 ${stWmm*MM}px;height:${t.stickerH*MM}px"></div>`:"";
-  const header = `<div class="tguide" style="display:flex;gap:${6*MM}px;margin-top:${4*MM}px;align-items:center;min-height:${(t.sticker?t.stickerH:26)*MM}px">${sticker}<div class="tguide" style="flex:1;display:flex;flex-direction:column;justify-content:center">${fieldsHtml}</div></div>`;
-  const rowH=Math.max(t.sqH,t.rectH)*MM, sq=t.sqW*MM, sqh=t.sqH*MM, rw=t.rectW*MM, rh=t.rectH*MM, br=t.boxR, gp=1.5*MM;
-  // клетка = квадрат + прямоугольник + линия (ширина и высота каждого — раздельно)
-  const cellInner=`<div style="display:flex;align-items:flex-end;gap:${gp}px;height:${rowH}px">
-      <div style="width:${sq}px;height:${sqh}px;flex:0 0 auto;border:1px solid ${t.lineColor};border-radius:${br}px"></div>
-      <div style="width:${rw}px;height:${rh}px;flex:0 0 auto;border:1px solid ${t.lineColor};border-radius:${br}px"></div>
-      <span style="flex:1;min-width:0;border-bottom:1px solid ${t.lineColor}"></span>
-    </div>`;
-  let boxes=""; for(let i=0;i<t.cols*t.rows;i++) boxes+=cellInner;
-  const grid = `<div class="tguide" style="display:grid;grid-template-columns:repeat(${t.cols},1fr);gap:${t.boxGap*MM}px;margin-top:${6*MM}px">${boxes}</div>`;
-  let punch="";
-  if(t.punch){
-    const dd=t.punchD*MM, m=t.punchMargin*MM;
-    const along = t.punchSide==="left" ? uh : uw;
-    punchPositions(along).forEach(aMm=>{
-      const a=aMm*MM, cx=t.punchSide==="left"?m:a, cy=t.punchSide==="left"?a:m;
-      punch+=`<span style="position:absolute;left:${cx-dd/2}px;top:${cy-dd/2}px;width:${dd}px;height:${dd}px;border-radius:50%;border:1px solid ${t.lineColor};background:#fff"></span>`;
-    });
-  }
-  const cutBorder = cut ? `outline:1px dashed ${t.lineColor};outline-offset:-0.5px;` : "";
-  return `<div style="position:relative;width:${uw*MM}px;height:${uh*MM}px;padding:${padCss};overflow:hidden;background:#fff;${cutBorder}font-family:${t.font};color:${t.textColor}">${titleHtml}${subHtml}${header}${grid}${punch}</div>`;
-}
-// линии реза (пунктир) поверх листа
-function cutLinesHtml(L,sw,sh){
-  if(!state.tracker.cutLine) return "";
-  const S=`position:absolute;pointer-events:none;`;
-  const v=`<div style="${S}left:${sw/2*MM}px;top:0;height:${sh*MM}px;border-left:1.5px dashed #b7b7bd"></div>`;
-  const h=`<div style="${S}top:${sh/2*MM}px;left:0;width:${sw*MM}px;border-top:1.5px dashed #b7b7bd"></div>`;
-  if(L.cut==="v") return v;
-  if(L.cut==="h") return h;
-  if(L.cut==="cross") return v+h;
-  return "";
-}
-function renderTracker(){
-  if(state.tracker.pageType==="divider"){ renderDivider(); return; }
-  const L=trackerLayout(), sw=L.sheetW, sh=L.sheetH;
-  const gcl=state.tracker.showGuides?" guides":"";
-  $("#pageStyle").textContent=`@page{size:${L.paperCss==="Letter"?"letter":L.paperCss} ${L.orient};margin:0}`;
-  if(L.pages===1){
-    $("#sheetWrap").innerHTML=`<div class="sheet${gcl}" style="position:relative;width:${sw*MM}px;height:${sh*MM}px">${trackerUnitHtml(sw,sh,false)}</div>`;
-    $("#pageInfo").textContent="Трекер · 1 страница";
-  }else{
-    const cellW=sw/L.cols, cellH=sh/L.rows;
-    let cells="";
-    for(let i=0;i<L.cols*L.rows;i++) cells+=`<div style="position:relative;overflow:hidden">${trackerUnitHtml(cellW,cellH,false)}</div>`;
-    $("#sheetWrap").innerHTML=`<div class="sheet${gcl}" style="position:relative;width:${sw*MM}px;height:${sh*MM}px;display:grid;grid-template-columns:repeat(${L.cols},1fr);grid-template-rows:repeat(${L.rows},1fr)">${cells}${cutLinesHtml(L,sw,sh)}</div>`;
-    $("#pageInfo").textContent=`Трекер · ${L.pages} стр. на листе A4 (разрезать по пунктиру)`;
-  }
-  applyZoom();
-}
-
-// единая разбивка на страницы для превью, печати и PDF
-function paginate(){
-  const d=state.design, p=PAPER[d.paper];
-  let w=p.w, h=p.h;
-  if(d.orient==="landscape"){ [w,h]=[h,w]; }
-  const rowsPerPage=Math.max(1, Math.floor((h-2*d.pad+d.gap)/(d.rowH+d.gap)));
-  const perPage=rowsPerPage*d.cols;
-  const pages=[];
-  for(let s=0;s<state.markers.length;s+=perPage) pages.push(state.markers.slice(s,s+perPage));
-  return {w,h,perPage,pages:pages.length?pages:[[]]};
-}
-function renderSheet(){
-  if(state.mode==="tracker"){ renderTracker(); return; }
-  const d=state.design;
-  const p=PAPER[d.paper];
-  let w=p.w, h=p.h;
-  if(d.orient==="landscape"){ [w,h]=[h,w]; }
-  // формат страницы для печати 1:1 (без полей браузера и колонтитулов)
-  $("#pageStyle").textContent=`@page{size:${d.paper==="Letter"?"letter":d.paper} ${d.orient};margin:0}`;
-  const wrap=$("#sheetWrap");
-  const sheetStyle=`position:relative;width:${w*MM}px;height:${h*MM}px;padding:${d.pad*MM}px;overflow:hidden`;
-  const sheetBg = (d.bgImage && d.bgMode==="sheet")
-    ? `<div class="sheet-bg" style="${bgLayerCss()}"></div>` : "";
-
-  if(!state.markers.length){
-    wrap.innerHTML=`<div class="sheet" style="${sheetStyle}"><div class="empty-note">Добавьте маркеры — здесь появится разлиновка.</div></div>`;
-    $("#pageInfo").textContent="";
-    applyZoom();
-    return;
-  }
-  // реальная разбивка на страницы — как при печати и в PDF
-  const {perPage, pages:pageChunks} = paginate();
-  const collapse = d.border && d.gap===0 && d.corner===0;
-  let gridStyle=`display:grid;align-content:start;justify-content:start;`
-    +`grid-template-columns:${d.stripW>0?`repeat(${d.cols}, ${d.stripW*MM}px)`:`repeat(${d.cols}, 1fr)`};`
-    +`width:${d.stripW>0?"fit-content":"100%"};`
-    +`grid-auto-rows:${d.rowH*MM}px;gap:${d.gap*MM}px;position:relative;z-index:1;`
-    +(collapse?`border-top:1px solid ${d.lineColor};border-left:1px solid ${d.lineColor};`:"");
-  const pages=pageChunks;
-  wrap.innerHTML=pages.map((chunk,pi)=>{
-    const cells=chunk.map((m,i)=>cellHtml(m,collapse,pi*perPage+i)).join("");
-    return `<div class="sheet" style="${sheetStyle}">${sheetBg}<div class="grid" style="${gridStyle}">${cells}</div></div>`;
-  }).join("");
-  $("#pageInfo").textContent=`${pages.length} стр. · ${perPage} на стр.`;
-  applyZoom();
-}
-
-/* ---------- экспорт в PDF (canvas → JPEG → PDF без библиотек) ---------- */
-const CSSMM = 1/MM; // 1 css-пиксель в мм
-
-function loadBgImage(){
-  if(!state.design.bgImage) return Promise.resolve(null);
-  return new Promise(r=>{
-    const im=new Image();
-    im.onload=()=>r(im); im.onerror=()=>r(null);
-    im.src=state.design.bgImage;
-  });
-}
-function canvasFont(bold,italic){
-  const d=state.design;
-  return `${italic?"italic ":""}${bold?"700 ":""}${(d.fs*0.3528).toFixed(3)}px ${d.font}`;
-}
-function drawBgOn(ctx,x,y,w,h,img){
-  const d=state.design;
-  ctx.save();
-  ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
-  ctx.globalAlpha=d.bgOpacity/100;
-  const rot=(d.bgRotate||0)*Math.PI/180;
-  const cx=x+w/2, cy=y+h/2;
-  if(rot){ ctx.translate(cx,cy); ctx.rotate(rot); ctx.translate(-cx,-cy); }
-  const ew=rot?w*2.5:w, eh=rot?h*2.5:h;
-  const ex=cx-ew/2, ey=cy-eh/2;
-  if(d.bgFit==="tile"){
-    const tileMm=((d.bgTilePx||60)*d.bgSize/100)*CSSMM;
-    const pat=ctx.createPattern(img,"repeat");
-    if(pat){
-      if(pat.setTransform) pat.setTransform(new DOMMatrix().scale(tileMm/img.naturalWidth));
-      ctx.fillStyle=pat; ctx.fillRect(ex,ey,ew,eh);
-    }
-  }else{
-    const ar=img.naturalWidth/img.naturalHeight;
-    let dw,dh;
-    if(d.bgFit==="stretch"){ dw=ew; dh=eh; }
-    else if(d.bgFit==="contain"){ if(ew/eh>ar){dh=eh;dw=eh*ar;}else{dw=ew;dh=ew/ar;} }
-    else { if(ew/eh>ar){dw=ew;dh=ew/ar;}else{dh=eh;dw=eh*ar;} }
-    ctx.drawImage(img, ex+(ew-dw)*(d.bgPosX/100), ey+(eh-dh)*(d.bgPosY/100), dw, dh);
-  }
-  ctx.restore();
-}
-function dashedShape(ctx,draw){
-  const d=state.design;
-  ctx.save();
-  ctx.fillStyle="#fff"; ctx.strokeStyle=d.lineColor;
-  ctx.lineWidth=CSSMM; ctx.setLineDash([0.7,0.7]);
-  ctx.beginPath(); draw(); ctx.fill(); ctx.stroke();
-  ctx.restore();
-}
-function drawCellOn(ctx,m,x,y,w,h,img){
-  const d=state.design;
-  if(img && d.bgMode==="cell") drawBgOn(ctx,x,y,w,h,img);
-  if(d.border){
-    ctx.save();
-    ctx.strokeStyle=d.lineColor; ctx.lineWidth=CSSMM;
-    ctx.beginPath();
-    if(d.corner>0 && ctx.roundRect) ctx.roundRect(x,y,w,h,d.corner); else ctx.rect(x,y,w,h);
-    ctx.stroke(); ctx.restore();
-  }
-  if(d.line){
-    ctx.save(); ctx.fillStyle=d.lineColor;
-    ctx.fillRect(x+d.lineX, y, d.lineW*CSSMM, h); ctx.restore();
-  }
-  if(d.spots>0){
-    const sz=d.spotSize, gapS=6*CSSMM;
-    let sx=x+d.spotIndent, sy=y+h/2;
-    for(let i=0;i<d.spots;i++){
-      const px=sx, py=sy-sz/2;
-      dashedShape(ctx,()=>{
-        if(d.spotShape==="circle") ctx.arc(px+sz/2,py+sz/2,sz/2,0,Math.PI*2);
-        else if(ctx.roundRect) ctx.roundRect(px,py,sz,sz,(d.corner*MM*0.4+2)*CSSMM);
-        else ctx.rect(px,py,sz,sz);
-      });
-      sx+=sz+gapS;
-    }
-  }
-  ctx.save(); ctx.textBaseline="middle"; ctx.textAlign="left";
-  if(d.showCode){
-    ctx.font=canvasFont(d.codeBold,d.codeItalic); ctx.fillStyle=d.textColor;
-    ctx.fillText(m.code||"", x+d.codeIndent, y+h/2);
-  }
-  if(d.showName){
-    ctx.font=canvasFont(d.nameBold,d.nameItalic); ctx.fillStyle="#777777";
-    ctx.fillText(m.name||"", x+d.nameIndent, y+h/2);
-  }
-  ctx.restore();
-  if(d.ring){
-    const sz=d.ringSize, rx=x+w-d.ringIndent-sz, ry=y+h/2-sz/2;
-    dashedShape(ctx,()=>ctx.arc(rx+sz/2,ry+sz/2,sz/2,0,Math.PI*2));
-  }
-}
-function renderPageCanvas(chunk,img,dpi,w,h){
-  const d=state.design, s=dpi/25.4;
-  const cv=document.createElement("canvas");
-  cv.width=Math.round(w*s); cv.height=Math.round(h*s);
-  const ctx=cv.getContext("2d");
-  ctx.scale(s,s);
-  ctx.fillStyle="#fff"; ctx.fillRect(0,0,w,h);
-  if(img && d.bgMode==="sheet") drawBgOn(ctx,0,0,w,h,img);
-  const contentW=w-2*d.pad;
-  const cellW = d.stripW>0 ? d.stripW : (contentW-d.gap*(d.cols-1))/d.cols;
-  chunk.forEach((m,i)=>{
-    const col=i%d.cols, row=Math.floor(i/d.cols);
-    drawCellOn(ctx,m,d.pad+col*(cellW+d.gap),d.pad+row*(d.rowH+d.gap),cellW,d.rowH,img);
-  });
-  return cv;
-}
-function dataUrlToBytes(u){
-  const bin=atob(u.split(",")[1]);
-  const a=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i);
-  return a;
-}
-function canvasesToPdf(cvs,wMm,hMm){
-  const enc=new TextEncoder();
-  const wPt=wMm*72/25.4, hPt=hMm*72/25.4;
-  const chunks=[]; let len=0; const off={};
-  const push=u8=>{chunks.push(u8); len+=u8.length;};
-  const pushStr=s=>push(enc.encode(s));
-  const addObj=(id,body,bin)=>{
-    off[id]=len;
-    pushStr(`${id} 0 obj\n${body}\n`);
-    if(bin){ pushStr("stream\n"); push(bin); pushStr("\nendstream\n"); }
-    pushStr("endobj\n");
-  };
-  pushStr("%PDF-1.4\n");
-  const n=cvs.length;
-  const kids=[]; for(let i=0;i<n;i++) kids.push(`${3+i*3} 0 R`);
-  addObj(1,"<< /Type /Catalog /Pages 2 0 R >>");
-  addObj(2,`<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${n} >>`);
-  cvs.forEach((cv,i)=>{
-    const pageId=3+i*3, contId=4+i*3, imgId=5+i*3;
-    addObj(pageId,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${wPt.toFixed(2)} ${hPt.toFixed(2)}] `
-      +`/Resources << /XObject << /Im0 ${imgId} 0 R >> >> /Contents ${contId} 0 R >>`);
-    const content=`q ${wPt.toFixed(2)} 0 0 ${hPt.toFixed(2)} 0 0 cm /Im0 Do Q`;
-    addObj(contId,`<< /Length ${content.length} >>`, enc.encode(content));
-    const jpg=dataUrlToBytes(cv.toDataURL("image/jpeg",0.95));
-    addObj(imgId,`<< /Type /XObject /Subtype /Image /Width ${cv.width} /Height ${cv.height} `
-      +`/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>`, jpg);
-  });
-  const xrefOff=len, total=2+n*3;
-  let xref=`xref\n0 ${total+1}\n0000000000 65535 f \n`;
-  for(let id=1;id<=total;id++) xref+=String(off[id]).padStart(10,"0")+" 00000 n \n";
-  pushStr(xref);
-  pushStr(`trailer\n<< /Size ${total+1} /Root 1 0 R >>\nstartxref\n${xrefOff}\n%%EOF`);
-  const out=new Uint8Array(len); let o=0;
-  chunks.forEach(c=>{out.set(c,o); o+=c.length;});
-  return new Blob([out],{type:"application/pdf"});
-}
-function roundRectPath(ctx,x,y,w,h,r){
-  r=Math.max(0,Math.min(r,w/2,h/2));
-  ctx.beginPath();
-  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
-}
-// одна единица трекера размером uw×uh мм → canvas
-function drawTrackerUnitCanvas(uw,uh,dpi){
-  const t=state.tracker, s=dpi/25.4, pm=v=>v*0.3528;
-  const w=uw, h=uh;
-  const cv=document.createElement("canvas"); cv.width=Math.round(w*s); cv.height=Math.round(h*s);
-  const ctx=cv.getContext("2d"); ctx.scale(s,s);
-  ctx.fillStyle="#fff"; ctx.fillRect(0,0,w,h);
-  const padL=t.padLeft, padR=t.padRight, padT=t.padTop, padB=t.padBottom;
-  const cw=w-padL-padR; let y=padT;
-  const alignX=()=>t.titleAlign==="center"?(padL+cw/2):(t.titleAlign==="right"?w-padR:padL);
-  ctx.textBaseline="top";
-  if(t.title){
-    ctx.fillStyle=t.textColor; ctx.font=`${pm(t.titleSize)}px ${t.titleFont}`;
-    ctx.textAlign=t.titleAlign; ctx.fillText(t.title,alignX(),y); y+=pm(t.titleSize)*1.2;
-  }
-  if(t.subtitle){
-    ctx.fillStyle=t.accent; ctx.font=`${pm(t.fieldSize+2)}px ${t.fieldFont}`;
-    ctx.textAlign=t.titleAlign; ctx.fillText(t.subtitle,alignX(),y); y+=pm(t.fieldSize+2)*1.4;
-  }
-  y+=3;
-  const fieldsH=t.fields.length*pm(t.fieldSize)*1.6;
-  const stW=t.sticker?Math.min(t.stickerW,cw):0;
-  const stH=t.sticker?t.stickerH:0;
-  const headerH=Math.max(fieldsH,stH,26);
-  const fx=padL+(t.sticker?stW+6:0), fw=w-padR-fx;
-  let fy=y+(headerH-fieldsH)/2;
-  ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-  t.fields.forEach(f=>{
-    const rowH=pm(t.fieldSize)*1.6, baseY=fy+rowH*0.7;
-    ctx.fillStyle=t.textColor; ctx.font=`${pm(t.fieldSize)}px ${t.fieldFont}`;
-    ctx.fillText(f,fx,baseY);
-    const lw=ctx.measureText(f+" ").width;
-    ctx.strokeStyle=t.lineColor; ctx.lineWidth=0.3; ctx.setLineDash([]);
-    ctx.beginPath(); ctx.moveTo(fx+lw,baseY+1); ctx.lineTo(fx+fw,baseY+1); ctx.stroke();
-    fy+=rowH;
-  });
-  y+=headerH+6;
-  const gap=t.boxGap, bw=(cw-gap*(t.cols-1))/t.cols, bh=Math.max(t.sqH,t.rectH), br=t.boxR*CSSMM;
-  const gp=1.5, sq=t.sqW, sqh=t.sqH, rw=t.rectW, rh=t.rectH;
-  ctx.strokeStyle=t.lineColor; ctx.lineWidth=0.3; ctx.setLineDash([]);
-  for(let i=0;i<t.cols*t.rows;i++){
-    const c=i%t.cols, r=Math.floor(i/t.cols), bx=padL+c*(bw+gap), by=y+r*(bh+gap);
-    if(by+bh>h-padB) break;
-    const bottom=by+bh; // элементы прижаты к низу ряда
-    roundRectPath(ctx,bx,bottom-sqh,sq,sqh,br); ctx.stroke();
-    roundRectPath(ctx,bx+sq+gp,bottom-rh,rw,rh,br); ctx.stroke();
-    const lineStart=bx+sq+gp+rw+gp;
-    if(lineStart<bx+bw-1){ ctx.beginPath(); ctx.moveTo(lineStart,bottom); ctx.lineTo(bx+bw,bottom); ctx.stroke(); }
-  }
-  if(t.punch){
-    const dd=t.punchD, m=t.punchMargin;
-    const along=t.punchSide==="left"?h:w;
-    ctx.strokeStyle=t.lineColor; ctx.lineWidth=0.3; ctx.setLineDash([]);
-    punchPositions(along).forEach(a=>{
-      const cx=t.punchSide==="left"?m:a, cy=t.punchSide==="left"?a:m;
-      ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(cx,cy,dd/2,0,7); ctx.fill(); ctx.stroke();
-    });
-  }
-  return cv;
-}
-function drawTrackerCanvas(dpi){
-  const L=trackerLayout(), sw=L.sheetW, sh=L.sheetH;
-  if(L.pages===1){
-    return {cv:drawTrackerUnitCanvas(sw,sh,dpi), w:sw, h:sh};
-  }
-  const s=dpi/25.4, t=state.tracker;
-  const sheet=document.createElement("canvas"); sheet.width=Math.round(sw*s); sheet.height=Math.round(sh*s);
-  const ctx=sheet.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,sheet.width,sheet.height);
-  const cellW=sw/L.cols, cellH=sh/L.rows;
-  const unit=drawTrackerUnitCanvas(cellW,cellH,dpi);
-  for(let i=0;i<L.cols*L.rows;i++){
-    const c=i%L.cols, r=Math.floor(i/L.cols);
-    ctx.drawImage(unit,Math.round(c*cellW*s),Math.round(r*cellH*s));
-  }
-  // линии реза
-  if(t.cutLine){
-    ctx.strokeStyle="#b7b7bd"; ctx.lineWidth=1.5; ctx.setLineDash([6,5]);
-    if(L.cut==="v"||L.cut==="cross"){ ctx.beginPath(); ctx.moveTo(sw/2*s,0); ctx.lineTo(sw/2*s,sh*s); ctx.stroke(); }
-    if(L.cut==="h"||L.cut==="cross"){ ctx.beginPath(); ctx.moveTo(0,sh/2*s); ctx.lineTo(sw*s,sh/2*s); ctx.stroke(); }
-    ctx.setLineDash([]);
-  }
-  return {cv:sheet, w:sw, h:sh};
-}
-// разделитель: два canvas (лицо с картинкой + оборот с кружками)
-async function drawDividerCanvases(dpi){
-  const t=state.tracker, p=PAPER[t.paper]; let w=p.w,h=p.h; if(t.orient==="landscape")[w,h]=[h,w];
-  const s=dpi/25.4, pm=v=>v*0.3528;
-  // лицо
-  const front=document.createElement("canvas"); front.width=Math.round(w*s); front.height=Math.round(h*s);
-  const fc=front.getContext("2d"); fc.fillStyle="#fff"; fc.fillRect(0,0,front.width,front.height);
-  if(t.divImage){
-    const img=await new Promise(r=>{ const im=new Image(); im.onload=()=>r(im); im.onerror=()=>r(null); im.src=t.divImage; });
-    if(img){
-      const ax=t.divPadLeft*s, ay=t.divPadTop*s, aw=(w-t.divPadLeft-t.divPadRight)*s, ah=(h-t.divPadTop-t.divPadBottom)*s;
-      const ar=img.naturalWidth/img.naturalHeight, br=aw/ah;
-      let dw,dh;
-      if(t.divFit==="cover"){ if(br>ar){dw=aw;dh=aw/ar;}else{dh=ah;dw=ah*ar;} }
-      else { if(br>ar){dh=ah;dw=ah*ar;}else{dw=aw;dh=aw/ar;} }
-      fc.save(); fc.beginPath(); fc.rect(ax,ay,aw,ah); fc.clip();
-      fc.drawImage(img, ax+(aw-dw)/2, ay+(ah-dh)/2, dw, dh); fc.restore();
-    }
-  }
-  // оборот
-  const back=document.createElement("canvas"); back.width=Math.round(w*s); back.height=Math.round(h*s);
-  const bc=back.getContext("2d"); bc.scale(s,s); bc.fillStyle="#fff"; bc.fillRect(0,0,w,h);
-  let y=t.padTop;
-  if(t.divBackTitle){
-    bc.fillStyle=t.textColor; bc.font=`${pm(Math.max(14,t.titleSize*0.7))}px ${t.titleFont}`;
-    bc.textAlign="center"; bc.textBaseline="top"; bc.fillText(t.divBackTitle, w/2, y);
-    y+=pm(Math.max(14,t.titleSize*0.7))*1.4;
-  }
-  const cw=w-t.padLeft-t.padRight, gap=3, cellW=(cw-gap*(t.divCols-1))/t.divCols;
-  const d=t.divCircle, cellH=d+gap;
-  bc.strokeStyle=t.lineColor; bc.lineWidth=0.3; bc.setLineDash([]);
-  bc.textAlign="center"; bc.textBaseline="middle"; bc.fillStyle=t.textColor;
-  bc.font=`${pm(Math.max(6,t.divCircle*0.42))}px ${t.font}`;
-  for(let i=0;i<t.divCount;i++){
-    const c=i%t.divCols, r=Math.floor(i/t.divCols);
-    const cx=t.padLeft+c*(cellW+gap)+cellW/2, cy=y+r*cellH+d/2;
-    if(cy+d/2>h-t.padBottom) break;
-    bc.beginPath(); bc.arc(cx,cy,d/2,0,7); bc.stroke();
-    if(t.divNumbered) bc.fillText(String(i+1),cx,cy);
-  }
-  return {cvs:[front,back], w, h};
-}
-async function exportPdf(){
-  if(state.mode!=="tracker" && !state.markers.length){ toast("Сначала добавьте маркеры"); return; }
-  toast("Готовим PDF…");
-  try{ await document.fonts.ready; }catch(e){}
-  let cvs, w, h;
-  if(state.mode==="tracker" && state.tracker.pageType==="divider"){
-    const res=await drawDividerCanvases(200); cvs=res.cvs; w=res.w; h=res.h;
-  }else if(state.mode==="tracker"){
-    const res=drawTrackerCanvas(200); cvs=[res.cv]; w=res.w; h=res.h;
-  }else{
-    const img=await loadBgImage();
-    const pg=paginate(); w=pg.w; h=pg.h;
-    cvs=pg.pages.map(chunk=>renderPageCanvas(chunk,img,200,w,h));
-  }
-  const blob=canvasesToPdf(cvs,w,h);
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url; a.download="palette.pdf"; a.rel="noopener";
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),10000);
-  toast(`PDF готов · ${cvs.length} стр.`);
-}
-
-/* ---------- zoom ---------- */
-function applyZoom(){
-  $("#sheetWrap").style.transform=`scale(${state.zoom})`;
-  $("#zoomVal").textContent=Math.round(state.zoom*100)+"%";
-}
-function fitWidth(){
-  let w;
-  if(state.mode==="tracker"){ w=trackerSheet().w*MM; }
-  else { const p=PAPER[state.design.paper]; w=(state.design.orient==="landscape"?p.h:p.w)*MM; }
-  const avail=$(".main").clientWidth-60;
-  state.zoom=Math.min(1.2, Math.max(0.2, avail/w));
-  applyZoom();
-}
-
-/* ---------- share / export / import ---------- */
-function payload(){
-  return {v:1, markers:state.markers, sets:state.sets, design:state.design};
-}
-function encodeShare(){
-  const json=JSON.stringify(payload());
-  return btoa(unescape(encodeURIComponent(json)));
-}
-function decodeShare(str){
-  return JSON.parse(decodeURIComponent(escape(atob(str))));
-}
-function makeShareLink(){
-  const base=location.href.split("#")[0];
-  return base+"#p="+encodeShare();
-}
-function importData(obj,{merge}={}){
-  if(!obj) return;
-  if(obj.design) state.design={...DEFAULT_DESIGN,...obj.design};
-  if(merge){
-    if(obj.markers) state.markers=state.markers.concat(obj.markers.map(m=>({...m,id:uid()})));
-    if(obj.sets) state.sets=state.sets.concat(obj.sets.map(s=>({...s,id:uid()})));
-  }else{
-    if(obj.markers) state.markers=obj.markers;
-    if(obj.sets) state.sets=obj.sets;
-  }
-  save(); bindDesign(); renderMarkers(); renderSets(); renderSheet();
-}
-
-/* ---------- modal ---------- */
-function modal({title,hint,value,readonly,onOk}){
-  $("#modalTitle").textContent=title;
-  $("#modalHint").textContent=hint||"";
-  const ta=$("#modalText"); ta.value=value||""; ta.readOnly=!!readonly;
-  $("#modalBg").classList.add("show");
-  if(readonly){ ta.focus(); ta.select(); }
-  $("#modalOk").onclick=()=>{ if(onOk) onOk(ta.value); $("#modalBg").classList.remove("show"); };
-  $("#modalOk").style.display = onOk ? "" : "none";
-}
-
-/* ---------- util ---------- */
-function escapeHtml(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
-
-/* ---------- events ---------- */
-function initEvents(){
-  document.querySelectorAll(".tabs button").forEach(b=>{
-    b.onclick=()=>{
-      document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
-      b.classList.add("active");
-      document.querySelectorAll(".tabpane").forEach(p=>p.style.display="none");
-      $(`[data-pane=${b.dataset.tab}]`).style.display="";
-    };
-  });
-
-  // мобильная навигация: Маркеры/Наборы/Дизайн — панель, Превью — лист
-  document.querySelectorAll("#mobileNav button").forEach(b=>{
-    b.onclick=()=>setMView(b.dataset.mtab);
-  });
-  $("#btnAdd").onclick=()=>{
-    addMarker($("#addCode").value,$("#addName").value);
-    $("#addCode").value=""; $("#addCode").focus(); // название остаётся для серии
-  };
-
-  // массовое добавление: одно название + много кодов (в т.ч. диапазоны B701-750)
-  const expandCodes=(text)=>{
-    const out=[];
-    text.split(/[\n,;]+/).map(s=>s.trim()).filter(Boolean).forEach(tok=>{
-      const m=tok.match(/^(.*?)(\d+)[-–—](?:\D*?)(\d+)$/);
-      if(m){
-        const [,prefix,a,b]=m;
-        let from=parseInt(a,10), to=parseInt(b,10);
-        if(to>=from && to-from<999){
-          const pad=a.length;
-          for(let i=from;i<=to;i++) out.push(prefix+String(i).padStart(pad,"0"));
-          return;
-        }
+const forms=[]; // {root, refresh}
+function buildForm(container,sections,getObj,onChange){
+  const refreshers=[];
+  const change=(key)=>{ onChange(key); refreshers.forEach(r=>r()); };
+  const mk=(f)=>{
+    const o=()=>getObj();
+    const wrap=document.createElement("div");
+    const vis=()=>{ if(f.show) wrap.style.display=f.show(o())?"":"none"; };
+    switch(f.t){
+      case "row": {
+        wrap.className="frow"; f.fields.forEach(x=>wrap.appendChild(mk(x))); break;
       }
-      out.push(tok);
-    });
-    return out;
-  };
-  const bulkPreview=()=>{
-    const n=expandCodes($("#bulkCodes").value).length;
-    $("#bulkHint").innerHTML = n
-      ? `Будет добавлено: <b>${n}</b> шт.`
-      : `Разделители: запятая или новая строка (коды с пробелами вроде «G 202» не разрезаются). Диапазоны: <b>701-750</b>, <b>B701-750</b>, <b>001-050</b> (нули сохраняются).`;
-  };
-  $("#bulkCodes").addEventListener("input",bulkPreview);
-  $("#btnBulk").onclick=()=>{
-    const name=$("#bulkName").value.trim();
-    const codes=expandCodes($("#bulkCodes").value);
-    if(!codes.length){ toast("Введите коды"); return; }
-    codes.forEach(code=>state.markers.push({id:uid(),code,name}));
-    save(); renderMarkers(); renderSheet();
-    $("#bulkCodes").value=""; bulkPreview();
-    toast(`Добавлено ${codes.length} маркеров${name?" · "+name:""}`);
-  };
-  $("#addName").addEventListener("keydown",e=>{if(e.key==="Enter")$("#btnAdd").click();});
-  $("#addCode").addEventListener("keydown",e=>{if(e.key==="Enter")$("#addName").focus();});
-  $("#btnClearMarkers").onclick=()=>{ if(confirm("Очистить весь список маркеров?")){state.markers=[];save();renderMarkers();renderSheet();} };
-
-  $("#btnSaveSet").onclick=saveSet;
-
-  // #dLineXNum исключён: у него свой обработчик, иначе общий перезаписывал бы вводимое число
-  document.querySelectorAll("#stripsDesign input:not(#dLineXNum), #stripsDesign select")
-    .forEach(el=>el.addEventListener("input",readDesign));
-
-  // трекер: все настройки
-  document.querySelectorAll("#trackerDesign input, #trackerDesign select, #trackerDesign textarea")
-    .forEach(el=>el.addEventListener("input",readTracker));
-  $("#btnResetTracker").onclick=()=>{ state.tracker={...DEFAULT_TRACKER}; bindTracker(); setPageType(state.tracker.pageType); save(); renderSheet(); toast("Трекер сброшен"); };
-
-  // тип листа: Трекер / Разделитель
-  document.querySelectorAll("#pageTypeSeg button").forEach(b=>{ b.onclick=()=>setPageType(b.dataset.v); });
-  // загрузка картинки разделителя
-  const pickDiv=()=>$("#divFile").click();
-  $("#divDrop").onclick=pickDiv;
-  $("#divReplace").onclick=pickDiv;
-  $("#divFile").addEventListener("change",e=>{
-    const f=e.target.files[0]; if(!f) return;
-    const rd=new FileReader();
-    rd.onload=()=>{ state.tracker.divImage=rd.result; save(); updateDivUI(); renderSheet();
-      try{ if((localStorage.getItem(LS)||"").length>4.5e6) toast("Картинка большая — может не сохраниться"); }catch(err){ toast("Слишком большая картинка для сохранения"); } };
-    rd.readAsDataURL(f); e.target.value="";
-  });
-  $("#divClear").onclick=()=>{ state.tracker.divImage=""; save(); updateDivUI(); renderSheet(); };
-
-  // переключатель режима Разлиновка / Трекер
-  document.querySelectorAll("#modeSeg button").forEach(b=>{
-    b.onclick=()=>setMode(b.dataset.v);
-  });
-  CHIPS.forEach(([sel,key])=>{
-    $(sel).onclick=()=>{
-      state.design[key]=!state.design[key];
-      $(sel).classList.toggle("on",state.design[key]);
-      save(); renderSheet();
-    };
-  });
-  $("#btnResetDesign").onclick=()=>{ state.design={...DEFAULT_DESIGN}; bindDesign(); save(); renderSheet(); toast("Дизайн сброшен"); };
-
-  // числовой ввод положения полоски синхронизирован со слайдером
-  $("#dLineXNum").addEventListener("input",()=>{
-    const el=$("#dLineXNum");
-    if(el.value==="") return; // даём стереть поле перед вводом нового числа
-    const v=Math.max(0,Math.min(200,Math.round(+el.value)||0));
-    $("#dLineX").value=v;
-    readDesign();
-  });
-  $("#dLineXNum").addEventListener("blur",()=>{ $("#dLineXNum").value=state.design.lineX; });
-
-  // рисунок / паттерн
-  const pickBg=()=>$("#bgFile").click();
-  $("#bgDrop").onclick=pickBg;
-  $("#bgReplace").onclick=pickBg;
-  $("#bgFile").addEventListener("change",e=>{
-    const f=e.target.files[0]; if(!f) return;
-    const rd=new FileReader();
-    rd.onload=()=>{ state.design.bgImage=rd.result; state.design.bgTilePx=80; save(); updateBgUI(); renderSheet();
-      try{ if(localStorage.getItem(LS).length>4.5e6) toast("Картинка большая — может не сохраниться"); }catch(err){ toast("Слишком большая картинка для сохранения"); } };
-    rd.readAsDataURL(f);
-    e.target.value="";
-  });
-  $("#bgClear").onclick=()=>{ state.design.bgImage=""; save(); updateBgUI(); renderSheet(); };
-  document.querySelectorAll("#bgModeSeg button").forEach(b=>{
-    b.onclick=()=>{ state.design.bgMode=b.dataset.v; save(); updateBgUI(); renderSheet(); };
-  });
-
-  $("#zoomIn").onclick=()=>{state.zoom=Math.min(1.5,state.zoom+0.1);applyZoom();};
-  $("#zoomOut").onclick=()=>{state.zoom=Math.max(0.2,state.zoom-0.1);applyZoom();};
-  $("#zoomFit").onclick=fitWidth;
-
-  $("#btnTheme").onclick=()=>applyTheme(document.body.dataset.theme==="dark"?"light":"dark");
-  $("#btnPrint").onclick=()=>window.print();
-  $("#btnPdf").onclick=exportPdf;
-  $("#btnShare").onclick=()=>{
-    const link=makeShareLink();
-    if(link.length>16000){
-      toast("Слишком много данных для ссылки — используйте экспорт JSON");
+      case "num": {
+        wrap.className="f";
+        wrap.innerHTML=`<label><span>${f.label}</span><span class="nv"><input type="number" step="${f.step}" min="${f.min}" max="${f.max}" inputmode="decimal"><i>${f.unit}</i></span></label><input type="range" min="${f.min}" max="${f.max}" step="${f.step}">`;
+        const n=$("input[type=number]",wrap), r=$("input[type=range]",wrap);
+        const fill=()=>r.style.setProperty("--fill",((+r.value-f.min)/(f.max-f.min)*100)+"%");
+        const set=(v,src)=>{ v=Math.round(v/f.step)*f.step; v=+v.toFixed(3); o()[f.key]=v; if(src!=="n") n.value=v; if(src!=="r") r.value=v; fill(); change(f.key); };
+        r.oninput=()=>set(+r.value,"r");
+        n.oninput=()=>{ const v=parseFloat(String(n.value).replace(",",".")); if(isNaN(v)) return; set(clamp(v,f.hardMin??f.min,f.hardMax??f.max*4),"n"); };
+        n.onblur=()=>{ n.value=o()[f.key]; };
+        refreshers.push(()=>{ if(document.activeElement!==n) n.value=o()[f.key]; r.value=o()[f.key]; fill(); });
+        break;
+      }
+      case "sel": case "font": {
+        wrap.className="f";
+        wrap.innerHTML=`${f.label?`<label>${f.label}</label>`:""}<select></select>`;
+        const s=$("select",wrap);
+        s.innerHTML = f.t==="font"
+          ? FONTS.map(([g,items])=>`<optgroup label="${g}">`+items.map(([v,l])=>`<option value="${esc(v)}" style="font-family:${esc(v)}">${l}</option>`).join("")+`</optgroup>`).join("")
+          : f.opts.map(([v,l])=>`<option value="${esc(v)}">${l}</option>`).join("");
+        s.onchange=()=>{ o()[f.key]=f.numeric?+s.value:s.value; change(f.key); };
+        refreshers.push(()=>{ s.value=o()[f.key]; });
+        break;
+      }
+      case "seg": {
+        wrap.className="f";
+        wrap.innerHTML=`${f.label?`<label>${f.label}</label>`:""}<div class="seg">${f.opts.map(([v,l])=>`<button type="button" data-v="${esc(v)}">${l}</button>`).join("")}</div>`;
+        $$("button",wrap).forEach(b=>b.onclick=()=>{ o()[f.key]=f.numeric?+b.dataset.v:b.dataset.v; change(f.key); });
+        refreshers.push(()=>$$("button",wrap).forEach(b=>b.classList.toggle("on",String(o()[f.key])===b.dataset.v)));
+        break;
+      }
+      case "tog": {
+        wrap.innerHTML=`<label class="toggle"><input type="checkbox"> ${f.label}</label>`;
+        const c=$("input",wrap); c.onchange=()=>{ o()[f.key]=c.checked; change(f.key); };
+        refreshers.push(()=>{ c.checked=!!o()[f.key]; });
+        break;
+      }
+      case "col": {
+        wrap.className="f"; wrap.innerHTML=`<label>${f.label}</label><input type="color">`;
+        const c=$("input",wrap); c.oninput=()=>{ o()[f.key]=c.value; change(f.key); };
+        refreshers.push(()=>{ c.value=o()[f.key]; });
+        break;
+      }
+      case "txt": case "area": {
+        wrap.className="f";
+        wrap.innerHTML=`${f.label?`<label>${f.label}</label>`:""}${f.t==="txt"?`<input type="text" placeholder="${esc(f.ph)}">`:`<textarea rows="${f.rows||4}" placeholder="${esc(f.ph)}"></textarea>`}`;
+        const c=$("input,textarea",wrap);
+        c.oninput=()=>{ o()[f.key]=f.lines?c.value.split("\n").map(s=>s.trim()).filter(Boolean):c.value; change(f.key); };
+        refreshers.push(()=>{ if(document.activeElement===c) return; const v=o()[f.key]; c.value=f.lines?(v||[]).join("\n"):(v??""); });
+        break;
+      }
+      case "chips": {
+        wrap.className="f";
+        wrap.innerHTML=`<label>${f.label}</label><div class="chips">${f.items.map(([k,l,cls])=>`<button type="button" class="chip ${cls||""}" data-k="${k}">${l}</button>`).join("")}</div>`;
+        $$("button",wrap).forEach(b=>b.onclick=()=>{ o()[b.dataset.k]=!o()[b.dataset.k]; change(b.dataset.k); });
+        refreshers.push(()=>$$("button",wrap).forEach(b=>b.classList.toggle("on",!!o()[b.dataset.k])));
+        break;
+      }
+      case "sides": {
+        wrap.className="f";
+        const names=["top","right","bottom","left"], titles=["Сверху","Справа","Снизу","Слева"];
+        wrap.innerHTML=`<div class="lbl"><span>${f.label}</span><span class="count">мм</span></div><div class="sides">`
+          +names.map((s,i)=>`<input class="s-${s}" type="number" step="0.5" min="0" max="${f.max}" title="${titles[i]}" inputmode="decimal">`).join("")
+          +`<div class="s-page"><button type="button" class="s-link" title="Связать: менять все поля сразу">🔗</button></div></div>`;
+        const ins=names.map(s=>$(".s-"+s,wrap)), link=$(".s-link",wrap), page=$(".s-page",wrap);
+        ins.forEach((inp,i)=>inp.oninput=()=>{
+          const v=parseFloat(String(inp.value).replace(",",".")); if(isNaN(v)) return;
+          const val=clamp(v,0,f.max);
+          if(o()[f.link]) f.keys.forEach((k,j)=>{ o()[k]=val; if(j!==i) ins[j].value=val; }); else o()[f.keys[i]]=val;
+          change(f.keys[i]);
+        });
+        ins.forEach((inp,i)=>inp.onblur=()=>{ inp.value=o()[f.keys[i]]; });
+        link.onclick=()=>{ o()[f.link]=!o()[f.link]; if(o()[f.link]){ const v=o()[f.keys[0]]; f.keys.forEach(k=>o()[k]=v); } change(f.keys[0]); };
+        refreshers.push(()=>{
+          ins.forEach((inp,i)=>{ if(document.activeElement!==inp) inp.value=o()[f.keys[i]]; });
+          link.classList.toggle("on",!!o()[f.link]);
+          ["--pt","--pr","--pb","--pl"].forEach((v,i)=>page.style.setProperty(v,Math.min(24,o()[f.keys[i]]*0.6+2)+"px"));
+        });
+        break;
+      }
+      case "custom": f.build(wrap,{o,change,refreshers}); break;
     }
-    navigator.clipboard?.writeText(link).then(()=>toast("Ссылка скопирована"),()=>{});
-    modal({title:"Поделиться",hint:"Ссылка содержит всю палитру и настройки. Отправьте её другу — откроется как есть. (Также скопирована в буфер.)",value:link,readonly:true});
+    if(f.show) refreshers.push(vis);
+    return wrap;
   };
-  $("#btnExport").onclick=()=>{
-    const data=JSON.stringify(payload(),null,2);
-    const blob=new Blob([data],{type:"application/json"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob); a.download="palette.json"; a.click();
-    modal({title:"Экспорт JSON",hint:"Файл palette.json скачан. Ниже — те же данные, можно скопировать.",value:data,readonly:true});
-  };
-  // выезжающая панель импорта
-  const openDrawer=()=>{ $("#importDrawer").classList.add("show"); $("#drawerBg").classList.add("show"); $("#drawerText").focus(); };
-  const closeDrawer=()=>{ $("#importDrawer").classList.remove("show"); $("#drawerBg").classList.remove("show"); };
-  $("#btnImport").onclick=openDrawer;
-  $("#drawerClose").onclick=closeDrawer;
-  $("#drawerBg").onclick=closeDrawer;
-  $("#drawerImport").onclick=()=>{
-    const txt=$("#drawerText").value.trim(); if(!txt){ toast("Вставьте данные"); return; }
-    try{
-      const obj = txt.startsWith("{") ? JSON.parse(txt) : decodeShare(txt.replace(/^#?p=/,""));
-      importData(obj); $("#drawerText").value=""; closeDrawer(); toast("Импортировано");
-    }catch(e){ toast("Не удалось разобрать данные"); }
-  };
-  $("#drawerShare").onclick=()=>{ closeDrawer(); $("#btnShare").click(); };
-  $("#drawerExport").onclick=()=>{ closeDrawer(); $("#btnExport").click(); };
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDrawer(); });
-  // клик по тексту ленточки на листе — редактирование на месте
-  $("#sheetWrap").addEventListener("click",e=>{
-    const t=e.target.closest(".c-code,.c-name");
-    if(!t || t.isContentEditable) return;
-    const cell=t.closest(".cell");
-    const m=state.markers[+cell.dataset.i]; if(!m) return;
-    const field=t.classList.contains("c-code")?"code":"name";
-    t.contentEditable="true";
-    t.focus();
-    const range=document.createRange(); range.selectNodeContents(t);
-    const sel=getSelection(); sel.removeAllRanges(); sel.addRange(range);
-    let done=false;
-    const commit=(cancel)=>{
-      if(done) return; done=true;
-      if(!cancel){ m[field]=t.textContent.trim(); save(); }
-      renderMarkers(); renderSheet();
-    };
-    t.onblur=()=>commit(false);
-    t.onkeydown=ev=>{
-      if(ev.key==="Enter"){ ev.preventDefault(); commit(false); }
-      else if(ev.key==="Escape"){ commit(true); }
-    };
+  sections.forEach(sec=>{
+    const el=document.createElement(sec.plain?"div":"details");
+    el.className=sec.plain?"card":"sec"; if(!sec.plain && sec.open!==false) el.open=true;
+    el.innerHTML=sec.plain?(sec.title?`<h3>${sec.title}</h3>`:""):`<summary>${sec.title}</summary>`;
+    const body=document.createElement("div"); body.className=sec.plain?"":"sec-body";
+    sec.fields.forEach(f=>body.appendChild(mk(f)));
+    el.appendChild(body);
+    if(sec.show) refreshers.push(()=>{ el.style.display=sec.show(getObj())?"":"none"; });
+    container.appendChild(el);
   });
-
-  $("#modalCancel").onclick=()=>$("#modalBg").classList.remove("show");
-  $("#modalBg").onclick=e=>{ if(e.target===$("#modalBg")) $("#modalBg").classList.remove("show"); };
+  const refresh=()=>refreshers.forEach(r=>r());
+  forms.push({refresh}); refresh();
+  return refresh;
 }
+const refreshForms=()=>forms.forEach(f=>f.refresh());
 
-/* ---------- режим листа ---------- */
-function setMode(v){
-  state.mode=v; save();
-  document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
-  $("#stripsDesign").style.display = v==="tracker" ? "none" : "";
-  $("#trackerDesign").style.display = v==="tracker" ? "" : "none";
-  // в режиме трекера маркеры/наборы не нужны — прячем их вкладки, оставляем «Дизайн»
-  const isTracker = v==="tracker";
-  document.querySelector('.tabs button[data-tab=markers]').style.display = isTracker ? "none" : "";
-  document.querySelector('.tabs button[data-tab=sets]').style.display = isTracker ? "none" : "";
-  const dTab=document.querySelector('.tabs button[data-tab=design]');
-  dTab.textContent = isTracker ? "Настройки трекера" : "Дизайн";
-  if(isTracker) dTab.click();
-  else if(!document.querySelector('.tabs button.active')) document.querySelector('.tabs button[data-tab=markers]').click();
-  // подсветка активного режима в меню
-  document.querySelector('#modeSeg')?.setAttribute('data-mode',v);
-  renderSheet(); fitWidth();
+/* =========================================================
+   Вкладки по режимам
+   ========================================================= */
+const TABS={
+  strips:[["markers","Маркеры","🖊️"],["sets","Наборы","📚"],["sheet","Лист","📄"],["style","Ленточка","🎴"],["print","Печать","🖨️"]],
+  tracker:[["page","Лист","📄"],["content","Содержимое","📋"],["style","Стиль","🎨"],["print","Печать","🖨️"]]
+};
+const panes={}; // `${mode}:${tab}` → element
+function pane(mode,tab){ const el=document.createElement("div"); el.className="pane"; el.dataset.p=mode+":"+tab; el.style.display="none"; $("#panes").appendChild(el); panes[mode+":"+tab]=el; return el; }
+function showTab(tab){
+  state.tab[state.mode]=tab; save();
+  $$("#tabs button").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+  Object.entries(panes).forEach(([k,el])=>el.style.display = k===state.mode+":"+tab ? "" : "none");
+  if(document.body.dataset.mview && document.body.dataset.mview!=="preview") setMView(tab);
 }
-
-/* ---------- приветственная страница ---------- */
-function unsplash(id){ return `https://images.unsplash.com/photo-${id}?w=900&q=70&auto=format&fit=crop`; }
-function showWelcome(){ $("#welcome").classList.add("show"); }
-function hideWelcome(){ $("#welcome").classList.remove("show"); localStorage.setItem("palette_seen","1"); }
-function spawnFloaties(){
-  const box=$("#floaties"); if(!box) return;
-  box.innerHTML="";
-  const emojis=["🖊️","🎨","✏️","🖍️","🌈","✨","🖌️","🟣","🔵","🟢","🟡","🩷"];
-  const colors=["#5b8cff","#ff6fae","#54d6a6","#ffc24d","#c181d1","#00c2d6"];
-  const N=22;
-  for(let i=0;i<N;i++){
-    const el=document.createElement("span");
-    const useEmoji=Math.random()<0.6;
-    const size=useEmoji?(16+Math.random()*20):(6+Math.random()*12);
-    el.className="floatie"+(useEmoji?"":" dot");
-    if(useEmoji){ el.textContent=emojis[(Math.random()*emojis.length)|0]; el.style.fontSize=size+"px"; }
-    else { el.style.width=size+"px"; el.style.height=size+"px"; el.style.background=colors[(Math.random()*colors.length)|0]; el.style.opacity=".0"; }
-    el.style.left=(Math.random()*100)+"vw";
-    el.style.setProperty("--sway",(Math.random()*80-40)+"px");
-    el.style.animationDuration=(12+Math.random()*16)+"s";
-    el.style.animationDelay=(-Math.random()*20)+"s";
-    box.appendChild(el);
-  }
+function renderTabs(){
+  const t=TABS[state.mode];
+  $("#tabs").innerHTML=t.map(([k,l])=>`<button data-tab="${k}">${l}</button>`).join("");
+  $$("#tabs button").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+  $("#mobileNav").innerHTML=t.map(([k,l,i])=>`<button data-m="${k}"><span class="ico">${i}</span>${l}</button>`).join("")+`<button data-m="preview"><span class="ico">👁️</span>Превью</button>`;
+  $$("#mobileNav button").forEach(b=>b.onclick=()=>setMView(b.dataset.m));
+  const cur=t.some(x=>x[0]===state.tab[state.mode])?state.tab[state.mode]:t[0][0];
+  showTab(cur);
 }
-function initWelcome(){
-  spawnFloaties();
-  // подгружаем фото Unsplash с плавным фолбэком на градиент
-  document.querySelectorAll(".wcard-img[data-img]").forEach(el=>{
-    const im=new Image();
-    im.onload=()=>{ el.style.backgroundImage=`url("${unsplash(el.dataset.img)}")`; };
-    im.src=unsplash(el.dataset.img);
-  });
-  document.querySelectorAll(".wcard[data-choose]").forEach(b=>{
-    b.onclick=()=>{ hideWelcome(); setMode(b.dataset.choose); fitWidth(); };
-  });
-  $("#welcomeSkip").onclick=hideWelcome;
-  $("#btnHome").onclick=showWelcome;
-  if(!localStorage.getItem("palette_seen")) showWelcome();
-}
-
-/* ---------- mobile view ---------- */
 function setMView(v){
   document.body.dataset.mview=v;
-  document.querySelectorAll("#mobileNav button").forEach(b=>b.classList.toggle("active",b.dataset.mtab===v));
-  if(v==="preview"){
-    fitWidth();
-  }else{
-    const tab=document.querySelector(`.tabs button[data-tab=${v}]`);
-    if(tab) tab.onclick();
-  }
+  $$("#mobileNav button").forEach(b=>b.classList.toggle("active",b.dataset.m===v));
+  if(v==="preview") requestAnimationFrame(fitWidth);
+  else if(state.tab[state.mode]!==v){ state.tab[state.mode]=v; $$("#tabs button").forEach(b=>b.classList.toggle("active",b.dataset.tab===v));
+    Object.entries(panes).forEach(([k,el])=>el.style.display = k===state.mode+":"+v ? "" : "none"); }
+}
+function setMode(m){
+  state.mode=m; save();
+  $$("#modeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.v===m));
+  renderTabs(); render(); requestAnimationFrame(fitWidth);
 }
 
-/* ---------- boot ---------- */
-function boot(){
-  initTheme();
+/* ---------- общий обработчик изменений ---------- */
+const onDesign=(k)=>{ save(); render(); if(k==="font") loadFont(state.design.font); };
+const onTracker=(k)=>{ save(); render(); if(/font/i.test(k)) loadFont(state.tracker[k]); };
+const onPrint=()=>{ save(); render(); };
+function loadFont(fam){ if(!fam||!document.fonts) return; Promise.all([document.fonts.load(`16px ${fam}`),document.fonts.load(`italic 700 16px ${fam}`)]).then(()=>{ clearMetrics(); render(); }).catch(()=>{}); }
+
+/* =========================================================
+   ВЫКРАСКА: вкладки
+   ========================================================= */
+function buildStripsPanes(){
+  /* --- Маркеры --- */
+  const pm=pane("strips","markers");
+  pm.innerHTML=`
+    <div class="card"><h3>Добавить маркер</h3>
+      <div class="mk-add"><input type="text" class="code" id="addCode" placeholder="Код"><input type="text" id="addName" placeholder="Название / бренд"></div>
+      <button class="btn primary wide" id="btnAdd">Добавить</button>
+      <p class="hint">Enter в поле кода — добавить. Название остаётся, удобно набивать серию кодов подряд.</p></div>
+    <div class="card"><h3>Добавить много кодов</h3>
+      <div class="f"><input type="text" id="bulkName" placeholder="Название для всех (напр. GuangNa)"></div>
+      <div class="f"><textarea id="bulkCodes" rows="3" placeholder="B701, B702, G 202 или диапазон B701-750"></textarea></div>
+      <button class="btn primary wide" id="btnBulk">Добавить все</button>
+      <p class="hint" id="bulkHint"></p></div>
+    <div class="card"><h3>Список <span class="count" id="mkCount"></span></h3>
+      <div class="list-tools">
+        <button class="btn sm" id="btnSort" title="Сортировать по коду (числа — по порядку)">↕ По коду</button>
+        <button class="btn sm" id="btnDedup" title="Убрать повторяющиеся коды">Убрать повторы</button>
+        <button class="btn sm danger" id="btnClear">Очистить</button>
+      </div>
+      <div class="mklist" id="mklist"></div>
+      <p class="hint">Перетаскивайте ⋮⋮ для порядка. Нажмите на код или название, чтобы изменить — или прямо на листе в превью.</p></div>`;
+  /* --- Наборы --- */
+  const ps=pane("strips","sets");
+  ps.innerHTML=`
+    <div class="card"><h3>Мои наборы <span class="count" id="setCount"></span></h3>
+      <div class="frow"><input type="text" id="setName" placeholder="Название набора"><button class="btn primary" id="btnSaveSet" style="flex:0 0 auto">Сохранить список</button></div>
+      <p class="hint">Сохраняет текущий список маркеров как ваш набор.</p>
+      <div id="setlist" style="margin-top:10px"></div>
+      <div class="list-tools" style="margin-top:8px">
+        <button class="btn sm" id="btnNewSet">＋ Набор из кодов</button>
+        <button class="btn sm" id="btnSetsExport">⇩ Экспорт наборов</button>
+        <button class="btn sm" id="btnSetsImport">⇧ Импорт</button>
+      </div></div>
+    <div class="card"><h3>Готовые наборы</h3>
+      <div class="f"><label>Подпись на ленточке</label><div class="seg" id="labelSeg">
+        <button data-v="color">Название цвета</button><button data-v="brand">Бренд</button><button data-v="none">Без подписи</button></div></div>
+      <input type="text" class="preset-search" id="presetSearch" placeholder="Поиск: 168, metallic, gloss…">
+      <div id="presetList"></div>
+      <p class="hint">Коды GuangNa сверены с поштучным каталогом дистрибьютора и списками апгрейд-наборов; количество в каждом наборе проверено. В коробке маркеры могут лежать не по номерам. Своего набора нет? Добавьте коды и сохраните в «Мои наборы».</p></div>`;
+  /* --- Лист --- */
+  buildForm(pane("strips","sheet"),[
+    {title:"Формат листа",fields:[
+      row(sel("paper","Формат",PAPERS),sel("orient","Ориентация",ORIENT,{show:d=>d.paper!=="custom"})),
+      row(num("customW","Ширина",50,500,1,"мм",{show:d=>d.paper==="custom"}),num("customH","Высота",50,500,1,"мм",{show:d=>d.paper==="custom"})),
+    ]},
+    {title:"Поля листа",fields:[
+      sides(["mT","mR","mB","mL"],"Отступы от края листа","marginLink"),
+      tog("showGuides","Показывать границы полей на превью"),
+      custom((w)=>{ w.innerHTML=`<p class="hint">Розовая зона на превью — область, которую принтер может не пропечатать. Её размер задаётся во вкладке «Печать».</p>`; }),
+    ]},
+    {title:"Сетка ленточек",fields:[
+      row(num("cols","Колонок",1,8,1,"шт"),num("rowH","Высота",6,60,0.5)),
+      num("stripW","Ширина ленточки (0 — на всю ширину)",0,200,0.5,"мм"),
+      row(num("gapX","Зазор колонок",0,20,0.5),num("gapY","Зазор рядов",0,20,0.5)),
+      row(seg("hAlign","По горизонтали",[["left","Слева"],["center","По центру"]]),seg("order","Порядок",[["rows","По рядам"],["cols","По колонкам"]])),
+      custom((w,{refreshers})=>{ w.className="info"; refreshers.push(()=>{ const i=lastInfo; if(!i||state.mode!=="strips") return;
+        w.innerHTML=`На странице: <b>${i.rowsPP}</b> рядов × <b>${i.cols}</b> = <b>${i.perPage}</b> ленточек<br>Ширина ленточки: <b>${i.sw.toFixed(1)} мм</b> · сетка ${i.gridW.toFixed(1)} из ${i.cW.toFixed(1)} мм`; }); }),
+    ]},
+    {title:"Линии и рез",fields:[
+      seg("border","Рамка ленточки",[["solid","Сплошная"],["dashed","Пунктир"],["none","Нет"]]),
+      row(num("borderW","Толщина линий",0.05,1.5,0.05),num("corner","Скругление",0,10,0.5)),
+      col("lineColor","Цвет линий"),
+      tog("cropMarks","Метки обрезки по краям сетки"),
+      custom(w=>{ w.innerHTML=`<p class="hint">При нулевых зазорах соседние ленточки делят одну линию — режьте точно по ней. Метки обрезки помогают резать на резаке.</p>`; }),
+    ]},
+  ],()=>state.design,onDesign);
+  /* --- Ленточка --- */
+  buildForm(pane("strips","style"),[
+    {title:"Текст",fields:[
+      font("font","Шрифт"),
+      row(num("fs","Размер",5,24,0.5,"pt"),tog("autoFit","Ужимать длинный текст")),
+      row(tog("showCode","Код"),tog("showName","Название")),
+      row(num("codeIndent","Сдвиг кода",0,150,0.5,"мм",{show:d=>d.showCode}),num("nameIndent","Сдвиг названия",0,150,0.5,"мм",{show:d=>d.showName})),
+      row(chips("Код",[["codeBold","B"],["codeItalic","I","i"]]),chips("Название",[["nameBold","B"],["nameItalic","I","i"]])),
+      row(col("textColor","Цвет кода"),col("nameColor","Цвет названия")),
+    ]},
+    {title:"Кружки под выкрас",fields:[
+      row(num("spots","Кол-во",0,6,1,"шт"),seg("spotShape","Форма",[["circle","Круг"],["square","Квадрат"]])),
+      row(num("spotSize","Размер",3,30,0.5),num("spotIndent","Отступ слева",0,60,0.5)),
+      row(num("spotGap","Между кружками",0,20,0.5),tog("spotDash","Пунктир")),
+    ]},
+    {title:"Отверстие под кольцо",fields:[
+      tog("ring","Показать отверстие"),
+      row(num("ringSize","Диаметр",2,12,0.5,"мм",{show:d=>d.ring}),num("ringIndent","От правого края",0,60,0.5,"мм",{show:d=>d.ring})),
+    ]},
+    {title:"Вертикальная полоска",open:false,fields:[
+      tog("line","Показать полоску"),
+      row(num("lineX","От левого края",0,200,0.5,"мм",{show:d=>d.line}),num("vlineW","Толщина",0.05,2,0.05,"мм",{show:d=>d.line})),
+    ]},
+    {title:"Рисунок / паттерн",open:false,fields:[
+      custom((w,{change,refreshers})=>{
+        w.innerHTML=`<label class="f" style="display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px">Готовые паттерны</label><div class="bg-gallery"></div>
+          <div class="bg-drop" data-a="pick">📷 Загрузить свою картинку</div>
+          <div class="bg-loaded"><img class="bg-thumb" alt=""><div class="frow"><button class="btn sm" data-a="pick">Заменить</button><button class="btn sm danger" data-a="clear">Убрать</button></div></div>`;
+        const g=$(".bg-gallery",w);
+        PRESET_PATTERNS.forEach(p=>{ const uri=patternUri(p.svg), b=document.createElement("button"); b.title=p.name; b._uri=uri;
+          b.style.backgroundImage=`url("${uri}")`; b.style.backgroundSize=Math.round(p.size*0.7)+"px";
+          b.onclick=()=>{ Object.assign(state.design,{bgImage:uri,bgFit:"tile",bgTilePx:p.size}); if(state.design.bgSize<20) state.design.bgSize=100; change("bgImage"); };
+          g.appendChild(b); });
+        $$("[data-a=pick]",w).forEach(b=>b.onclick=async()=>{ const f=await pickFile("image/*"); if(!f) return;
+          state.design.bgImage=await loadImageFile(f); state.design.bgTilePx=80; if(state.design.bgFit==="tile") state.design.bgFit="cover"; change("bgImage"); });
+        $("[data-a=clear]",w).onclick=()=>{ state.design.bgImage=""; change("bgImage"); };
+        refreshers.push(()=>{ const has=!!state.design.bgImage; $(".bg-drop",w).style.display=has?"none":""; $(".bg-loaded",w).style.display=has?"":"none";
+          if(has) $(".bg-thumb",w).src=state.design.bgImage; $$("button",g).forEach(b=>b.classList.toggle("on",b._uri===state.design.bgImage)); });
+      }),
+      seg("bgMode","Где",[["sheet","На весь лист"],["cell","В каждой ленточке"]],{show:d=>!!d.bgImage}),
+      sel("bgFit","Вписать",[["cover","Заполнить"],["contain","Вместить"],["tile","Замостить (паттерн)"],["stretch","Растянуть"]],{show:d=>!!d.bgImage}),
+      row(num("bgOpacity","Прозрачность",0,100,1,"%",{show:d=>!!d.bgImage}),num("bgSize","Размер",5,300,1,"%",{show:d=>!!d.bgImage})),
+      num("bgRotate","Поворот",0,360,5,"°",{show:d=>!!d.bgImage}),
+      row(num("bgPosX","Позиция ↔",0,100,1,"%",{show:d=>!!d.bgImage}),num("bgPosY","Позиция ↕",0,100,1,"%",{show:d=>!!d.bgImage})),
+    ]},
+    {title:"",plain:true,fields:[custom(w=>{ w.innerHTML=`<button class="btn ghost wide">↺ Сбросить оформление</button>`;
+      $("button",w).onclick=()=>{ if(!confirm("Вернуть оформление ленточки и листа по умолчанию? Маркеры останутся.")) return;
+        state.design=deep(DEFAULT_DESIGN); refreshForms(); save(); render(); toast("Оформление сброшено"); }; })]},
+  ],()=>state.design,onDesign);
+  buildPrintPane("strips");
+}
+
+/* =========================================================
+   ТРЕКЕР: вкладки
+   ========================================================= */
+function buildTrackerPanes(){
+  const isDiv=t=>t.pageType==="divider", isTr=t=>t.pageType!=="divider";
+  buildForm(pane("tracker","page"),[
+    {title:"Тип листа",plain:true,fields:[
+      seg("pageType","",[["tracker","📋 Трекер"],["divider","🖼 Разделитель"]]),
+      custom((w,{refreshers})=>refreshers.push(()=>{ w.innerHTML=`<p class="hint">${isDiv(state.tracker)
+        ?"Разделитель — вставной лист: на лицевой стороне ваша картинка, на обороте — кружки-номера для отметки готовых раскрасок. Печать двусторонняя."
+        :"Трекер — лист с шапкой и клетками: квадрат под выкрас, прямоугольник под код и линия для заметки."}</p>`; })),
+    ]},
+    {title:"Раскладка на листе",show:isTr,fields:[
+      sel("layout","",[["single","Одна страница"],["2a5","2 × A5 на A4 — рез по вертикали"],["2a5v","2 × A5 на A4 — рез по горизонтали"],["4a6","4 × A6 на A4"]]),
+      tog("cutLine","Линия реза между страницами",{show:t=>t.layout!=="single"}),
+      custom(w=>{ w.innerHTML=`<p class="hint">Несколько страниц на листе: печатайте на A4 и разрежьте по пунктиру. Все страницы одинаковые.</p>`; }),
+    ]},
+    {title:"Формат",show:t=>isDiv(t)||t.layout==="single",fields:[
+      row(sel("paper","Формат",PAPERS),sel("orient","Ориентация",ORIENT,{show:t=>t.paper!=="custom"})),
+      row(num("customW","Ширина",50,500,1,"мм",{show:t=>t.paper==="custom"}),num("customH","Высота",50,500,1,"мм",{show:t=>t.paper==="custom"})),
+    ]},
+    {title:"Отступы от края",fields:[
+      sides(["padTop","padRight","padBottom","padLeft"],"Поля страницы (оборот — для разделителя)","padLink"),
+      tog("showGuides","Показывать границы на превью"),
+    ]},
+    {title:"Картинка разделителя",show:isDiv,fields:[
+      custom((w,{change,refreshers})=>{
+        w.innerHTML=`<div class="bg-drop">🖼 Загрузить картинку (лицевая сторона)</div><div class="bg-loaded"><img class="bg-thumb" alt=""><div class="frow"><button class="btn sm" data-a="pick">Заменить</button><button class="btn sm danger" data-a="clear">Убрать</button></div></div>`;
+        const pick=async()=>{ const f=await pickFile("image/*"); if(!f) return; state.tracker.divImage=await loadImageFile(f,3000); change("divImage"); };
+        $(".bg-drop",w).onclick=pick; $("[data-a=pick]",w).onclick=pick;
+        $("[data-a=clear]",w).onclick=()=>{ state.tracker.divImage=""; change("divImage"); };
+        refreshers.push(()=>{ const has=!!state.tracker.divImage; $(".bg-drop",w).style.display=has?"none":""; $(".bg-loaded",w).style.display=has?"":"none"; if(has) $(".bg-thumb",w).src=state.tracker.divImage; });
+      }),
+      seg("divFit","Вписать",[["contain","Целиком"],["cover","Заполнить"]]),
+      sides(["divPadTop","divPadRight","divPadBottom","divPadLeft"],"Поля картинки (0 — до края)","divPadLink"),
+    ]},
+  ],()=>state.tracker,onTracker);
+
+  buildForm(pane("tracker","content"),[
+    {title:"Заголовок",show:isTr,fields:[
+      txt("title","","Заголовок (напр. Палитра раскраски)"),
+      txt("subtitle","","Подзаголовок (необязательно)"),
+      font("titleFont","Шрифт заголовка"),
+      row(num("titleSize","Размер",10,60,1,"pt"),sel("titleAlign","Выравнивание",[["center","По центру"],["left","Слева"],["right","Справа"]])),
+    ]},
+    {title:"Шапка",show:isTr,fields:[
+      tog("sticker","Место под наклейку"),
+      row(num("stickerW","Ширина",10,190,1,"мм",{show:t=>t.sticker}),num("stickerH","Высота",10,240,1,"мм",{show:t=>t.sticker})),
+      area("fields","Поля (по одному на строку)","Тема\nДата\nНомер страницы\nЗаметки",{lines:true}),
+      font("fieldFont","Шрифт полей"),
+      num("fieldSize","Размер полей",8,24,0.5,"pt"),
+    ]},
+    {title:"Сетка клеток",show:isTr,fields:[
+      row(num("cols","Колонок",1,8,1,"шт"),num("rows","Рядов",1,40,1,"шт")),
+      row(num("sqW","Квадрат: ширина",3,50,0.5),num("sqH","Квадрат: высота",3,50,0.5)),
+      row(num("rectW","Прям.: ширина",0,90,0.5),num("rectH","Прям.: высота",3,50,0.5)),
+      row(num("boxGap","Зазор рядов",0,15,0.5),num("boxR","Скругление",0,6,0.25)),
+    ]},
+    {title:"Отверстия для дырокола",fields:[
+      tog("punch","Отверстия под кольца / дырокол"),
+      row(num("punchN","Кол-во",1,10,1,"шт",{show:t=>t.punch}),sel("punchSide","Сторона",[["left","Слева"],["top","Сверху"]],{show:t=>t.punch})),
+      row(num("punchD","Диаметр",2,10,0.5,"мм",{show:t=>t.punch}),num("punchMargin","Центр от края",3,25,0.5,"мм",{show:t=>t.punch})),
+      sel("punchDist","Расстояние",[["custom","Своё (мм, через запятую)"],["even","Равномерно по краю"]],{show:t=>t.punch}),
+      txt("punchGaps","Промежутки между центрами, мм","45, 65, 45",{show:t=>t.punch&&t.punchDist==="custom"}),
+      custom(w=>{ w.innerHTML=`<p class="hint">Стандарт для 4 колец A5 — <b>45, 65, 45</b>; дырокол на 2 отверстия — <b>80</b>. Группа центрируется по краю.</p>`; }),
+    ]},
+    {title:"Оборот разделителя",show:isDiv,fields:[
+      txt("divBackTitle","Заголовок","Отметь готовые раскраски"),
+      font("titleFont","Шрифт заголовка"),
+      row(num("divCount","Кружков",1,300,1,"шт"),num("divCols","Колонок",1,20,1,"шт")),
+      row(num("divCircle","Диаметр кружка",5,30,0.5),tog("divNumbered","Номера")),
+    ]},
+  ],()=>state.tracker,onTracker);
+
+  buildForm(pane("tracker","style"),[
+    {title:"Оформление",fields:[
+      font("font","Основной шрифт"),
+      row(col("lineColor","Линии"),col("textColor","Текст"),col("accent","Акцент")),
+      num("lineW","Толщина линий",0.05,1.5,0.05),
+    ]},
+    {title:"",plain:true,fields:[custom(w=>{ w.innerHTML=`<button class="btn ghost wide">↺ Сбросить трекер</button>`;
+      $("button",w).onclick=()=>{ if(!confirm("Вернуть все настройки трекера по умолчанию?")) return;
+        state.tracker=deep(DEFAULT_TRACKER); refreshForms(); save(); render(); toast("Трекер сброшен"); }; })]},
+  ],()=>state.tracker,onTracker);
+  buildPrintPane("tracker");
+}
+
+/* =========================================================
+   ПЕЧАТЬ: калибровка и поля принтера (общие для всех режимов)
+   ========================================================= */
+function buildPrintPane(mode){
+  buildForm(pane(mode,"print"),[
+    {title:"Как печатать точно",plain:true,fields:[custom(w=>{ w.innerHTML=`
+      <ol class="hint" style="padding-left:18px;margin:0">
+        <li><b>PDF</b> — самый надёжный путь: страница уже точно нужного размера. Печатайте его с масштабом <b>100% / «Фактический размер»</b>.</li>
+        <li>Кнопка <b>«Печать»</b>: в окне печати выберите масштаб <b>100%</b>, поля — <b>Нет</b>, колонтитулы — <b>выкл</b>.</li>
+        <li>Один раз распечатайте <b>тестовую страницу</b> и при необходимости введите поправки ниже.</li>
+      </ol>
+      <div class="frow" style="margin-top:10px"><button class="btn sm" data-a="cal">🖨 Тестовая страница</button><button class="btn sm" data-a="calpdf">PDF теста</button></div>`;
+      $("[data-a=cal]",w).onclick=()=>printCalibration(false); $("[data-a=calpdf]",w).onclick=()=>printCalibration(true); })]},
+    {title:"Поля принтера (непечатаемая зона)",fields:[
+      sides(["uT","uR","uB","uL"],"Принтер не печатает ближе к краю, чем","uLink",20),
+      tog("showSafe","Показывать эту зону на превью"),
+      custom(w=>{ w.innerHTML=`<p class="hint">Обычно 3–5 мм. Узнать точно: на тестовой странице посмотрите «лесенку» у краёв — самая близкая к краю видимая цифра и есть поле. Приложение предупредит, если разметка туда заходит.</p>`; }),
+    ]},
+    {title:"Калибровка масштаба",fields:[
+      custom((w,{change,refreshers})=>{
+        w.innerHTML=`<p class="hint" style="margin-top:0">Измерьте линейкой линии на тестовой странице и введите, сколько получилось:</p>
+          <div class="frow"><div class="f"><label>Линия 100 мм вышла</label><input type="number" step="0.1" data-m="x" placeholder="100"></div>
+          <div class="f"><label>Вертикальная вышла</label><input type="number" step="0.1" data-m="y" placeholder="150"></div></div>
+          <button class="btn sm wide" data-a="apply">Рассчитать поправку</button>`;
+        $("[data-a=apply]",w).onclick=()=>{
+          const mx=parseFloat($("[data-m=x]",w).value), my=parseFloat($("[data-m=y]",w).value), vl=calibVLen();
+          if(!(mx>50) && !(my>50)){ toast("Введите измеренную длину в мм"); return; }
+          if(mx>50) state.print.sx=+(state.print.sx*100/mx).toFixed(2);
+          if(my>50) state.print.sy=+(state.print.sy*vl/my).toFixed(2);
+          change("sx"); toast(`Поправка: ${state.print.sx}% × ${state.print.sy}%`);
+        };
+        refreshers.push(()=>{ $("[data-m=y]",w).placeholder=String(calibVLen()); });
+      }),
+      row(num("sx","Масштаб по ширине",90,110,0.05,"%"),num("sy","Масштаб по высоте",90,110,0.05,"%")),
+      row(num("ox","Сдвиг вправо",-10,10,0.1,"мм"),num("oy","Сдвиг вниз",-10,10,0.1,"мм")),
+      tog("calPdf","Применять поправку и в PDF"),
+      custom((w,{change})=>{ w.innerHTML=`<button class="btn ghost sm wide">Сбросить калибровку</button>`;
+        $("button",w).onclick=()=>{ Object.assign(state.print,{sx:100,sy:100,ox:0,oy:0}); change("sx"); }; }),
+      custom(w=>{ w.innerHTML=`<p class="hint">Поправка действует только при печати и в PDF — превью показывает настоящий размер. Если уголки на тесте сместились (например, на 11.5 мм вместо 10), введите сдвиг −1.5 мм.</p>`; }),
+    ]},
+    {title:"Качество PDF",open:false,fields:[
+      seg("dpi","",[["200","200 dpi"],["300","300 dpi"],["400","400 dpi"]],{numeric:true}),
+      custom(w=>{ w.innerHTML=`<p class="hint">300 dpi — чёткие тонкие линии и текст. 400 — для очень мелкого шрифта, файл больше.</p>`; }),
+    ]},
+  ],()=>state.print,onPrint);
+}
+const calibVLen=()=>{ const s=sheetSize(); return Math.min(150,s.h-Math.max(66,(s.h-150)/2+10)-30); };
+
+/* =========================================================
+   Маркеры
+   ========================================================= */
+function addMarkers(list){ state.markers.push(...list.map(m=>({id:uid(),code:m.code||"",name:m.name||""}))); save(); renderMarkers(); render(); }
+const naturalKey=c=>String(c).replace(/\d+/g,n=>n.padStart(8,"0")).toLowerCase();
+function expandCodes(text){
+  const out=[];
+  text.split(/[\n,;]+/).map(s=>s.trim()).filter(Boolean).forEach(tok=>{
+    const m=tok.match(/^(.*?)(\d+)\s*[-–—]\s*(?:\1)?(\d+)$/);
+    if(m){ const [,pre,a,b]=m, from=parseInt(a,10), to=parseInt(b.length<a.length?a.slice(0,a.length-b.length)+b:b,10);
+      if(to>=from && to-from<1000){ for(let i=from;i<=to;i++) out.push(pre+String(i).padStart(a.length,"0")); return; } }
+    out.push(tok);
+  });
+  return out;
+}
+function renderMarkers(){
+  const box=$("#mklist"); if(!box) return;
+  $("#mkCount").textContent=state.markers.length?`· ${state.markers.length}`:"";
+  if(!state.markers.length){ box.innerHTML=`<div class="empty">Пусто. Добавьте коды выше или выберите готовый набор во вкладке «Наборы».</div>`; return; }
+  box.innerHTML=state.markers.map((m,i)=>`<div class="mkitem" draggable="true" data-i="${i}"><span class="grip">⋮⋮</span><span class="num">${i+1}</span>
+    <span class="code" data-f="code">${esc(m.code)||"—"}</span><span class="name" data-f="name">${esc(m.name)||"—"}</span><button class="x" title="Удалить">✕</button></div>`).join("");
+}
+function initMarkerEvents(){
+  const box=$("#mklist");
+  box.addEventListener("click",e=>{
+    const it=e.target.closest(".mkitem"); if(!it) return; const m=state.markers[+it.dataset.i];
+    if(e.target.closest(".x")){ state.markers.splice(+it.dataset.i,1); save(); renderMarkers(); render(); return; }
+    const span=e.target.closest("[data-f]"); if(!span) return;
+    it.draggable=false;
+    const inp=document.createElement("input"); inp.className="edit"; inp.value=m[span.dataset.f]||""; span.replaceWith(inp); inp.focus(); inp.select();
+    let done=false; const commit=ok=>{ if(done) return; done=true; if(ok){ m[span.dataset.f]=inp.value.trim(); save(); render(); } renderMarkers(); };
+    inp.onblur=()=>commit(true); inp.onkeydown=ev=>{ if(ev.key==="Enter") commit(true); if(ev.key==="Escape") commit(false); };
+  });
+  let from=null;
+  box.addEventListener("dragstart",e=>{ const it=e.target.closest(".mkitem"); if(!it) return; from=+it.dataset.i; it.classList.add("drag"); e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",""); });
+  box.addEventListener("dragend",()=>$$(".mkitem",box).forEach(x=>x.classList.remove("drag","over")));
+  box.addEventListener("dragover",e=>{ e.preventDefault(); $$(".mkitem",box).forEach(x=>x.classList.remove("over")); e.target.closest(".mkitem")?.classList.add("over"); });
+  box.addEventListener("drop",e=>{ e.preventDefault(); const it=e.target.closest(".mkitem"); if(!it||from===null) return;
+    const to=+it.dataset.i, [mv]=state.markers.splice(from,1); state.markers.splice(to,0,mv); from=null; save(); renderMarkers(); render(); });
+
+  const add=()=>{ const c=$("#addCode").value.trim(), n=$("#addName").value.trim(); if(!c&&!n){ toast("Введите код или название"); return; }
+    addMarkers([{code:c,name:n}]); $("#addCode").value=""; $("#addCode").focus(); box.scrollTop=box.scrollHeight; };
+  $("#btnAdd").onclick=add;
+  $("#addCode").onkeydown=e=>{ if(e.key==="Enter") add(); };
+  $("#addName").onkeydown=e=>{ if(e.key==="Enter") add(); };
+  const hint=()=>{ const n=expandCodes($("#bulkCodes").value).length;
+    $("#bulkHint").innerHTML=n?`Будет добавлено: <b>${n}</b>`:`Разделители — запятая или новая строка. Диапазоны: <b>701-750</b>, <b>B701-750</b>, <b>001-050</b> (нули сохраняются).`; };
+  $("#bulkCodes").oninput=hint; hint();
+  $("#btnBulk").onclick=()=>{ const codes=expandCodes($("#bulkCodes").value); if(!codes.length){ toast("Введите коды"); return; }
+    const name=$("#bulkName").value.trim(); addMarkers(codes.map(code=>({code,name}))); $("#bulkCodes").value=""; hint(); toast(`Добавлено ${codes.length}`); };
+  $("#btnSort").onclick=()=>{ state.markers.sort((a,b)=>naturalKey(a.code)<naturalKey(b.code)?-1:naturalKey(a.code)>naturalKey(b.code)?1:0); save(); renderMarkers(); render(); };
+  $("#btnDedup").onclick=()=>{ const seen=new Set(), before=state.markers.length;
+    state.markers=state.markers.filter(m=>{ const k=(m.code||m.name).trim().toUpperCase(); if(!k) return true; if(seen.has(k)) return false; seen.add(k); return true; });
+    save(); renderMarkers(); render(); toast(`Убрано повторов: ${before-state.markers.length}`); };
+  $("#btnClear").onclick=()=>{ if(state.markers.length && confirm("Очистить весь список маркеров?")){ state.markers=[]; save(); renderMarkers(); render(); } };
+}
+
+/* =========================================================
+   Наборы: готовые + мои
+   ========================================================= */
+function presetMarkers(p){
+  return p.markers.map(([code,color])=>({code,name:state.labelMode==="color"?color||"":state.labelMode==="brand"?p.brand:""}));
+}
+function applyList(list,append,label){
+  const copy=list.map(m=>({id:uid(),code:m.code||"",name:m.name||""}));
+  if(!append && state.markers.length && !confirm(`Заменить текущий список (${state.markers.length} шт.) на «${label}»?`)) return;
+  state.markers=append?state.markers.concat(copy):copy;
+  save(); renderMarkers(); render(); toast(append?`Добавлено ${copy.length} в список`:`«${label}»: ${copy.length} маркеров`);
+}
+function renderPresets(){
+  const q=($("#presetSearch")?.value||"").trim().toLowerCase(), box=$("#presetList"); if(!box) return;
+  $$("#labelSeg button").forEach(b=>b.classList.toggle("on",b.dataset.v===state.labelMode));
+  const list=(typeof BUILTIN_PRESETS!=="undefined"?BUILTIN_PRESETS:[]).filter(p=>!q||(p.title+" "+p.line+" "+p.size).toLowerCase().includes(q)||p.markers.some(m=>m[0].toLowerCase()===q));
+  if(!list.length){ box.innerHTML=`<div class="empty">Ничего не найдено</div>`; return; }
+  let html="", lastBrand="";
+  list.forEach(p=>{
+    if(p.brand!==lastBrand){ html+=`<div class="brand-group">${esc(p.brand)}</div>`; lastBrand=p.brand; }
+    const first=p.markers.slice(0,6).map(m=>m[0]).join(", ");
+    html+=`<div class="pset" data-id="${p.id}"><div class="top"><span class="nm">${esc(p.title)}</span><span class="sz">${p.size}</span></div>
+      <div class="meta">${esc(p.line)} · ${esc(first)}…</div>
+      <div class="acts"><button class="btn sm primary" data-a="apply">Применить</button><button class="btn sm" data-a="append">＋ Дописать</button><button class="btn sm ghost" data-a="copy" title="Скопировать в «Мои наборы», чтобы изменить">В мои</button></div></div>`;
+  });
+  box.innerHTML=html;
+}
+function renderSets(){
+  const box=$("#setlist"); if(!box) return;
+  $("#setCount").textContent=state.sets.length?`· ${state.sets.length}`:"";
+  box.innerHTML=state.sets.length?state.sets.map(s=>`<div class="pset" data-id="${s.id}"><div class="top"><span class="nm">${esc(s.name)}</span><span class="sz">${s.markers.length}</span></div>
+    <div class="meta">${esc(s.markers.slice(0,6).map(m=>m.code||m.name).join(", "))}${s.markers.length>6?"…":""}</div>
+    <div class="acts"><button class="btn sm primary" data-a="apply">Применить</button><button class="btn sm" data-a="append">＋ Дописать</button>
+    <button class="btn sm ghost" data-a="update" title="Заменить содержимое набора текущим списком">⟳ Обновить</button><button class="btn sm ghost" data-a="rename">✎</button><button class="btn sm ghost danger" data-a="del">✕</button></div></div>`).join("")
+    :`<div class="empty">Своих наборов пока нет. Наберите список во вкладке «Маркеры» и сохраните его здесь.</div>`;
+}
+function initSetEvents(){
+  $("#labelSeg").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; state.labelMode=b.dataset.v; save(); renderPresets(); };
+  $("#presetSearch").oninput=renderPresets;
+  $("#presetList").onclick=e=>{
+    const b=e.target.closest("[data-a]"); if(!b) return;
+    const p=BUILTIN_PRESETS.find(x=>x.id===b.closest(".pset").dataset.id);
+    if(b.dataset.a==="copy"){ state.sets.push({id:uid(),name:p.title,markers:presetMarkers(p)}); save(); renderSets(); toast(`«${p.title}» скопирован в «Мои наборы»`); return; }
+    applyList(presetMarkers(p),b.dataset.a==="append",p.title);
+  };
+  $("#setlist").onclick=e=>{
+    const b=e.target.closest("[data-a]"); if(!b) return;
+    const s=state.sets.find(x=>x.id===b.closest(".pset").dataset.id); if(!s) return;
+    const a=b.dataset.a;
+    if(a==="apply"||a==="append") applyList(s.markers,a==="append",s.name);
+    else if(a==="del"){ if(confirm(`Удалить набор «${s.name}»?`)){ state.sets=state.sets.filter(x=>x!==s); save(); renderSets(); } }
+    else if(a==="rename"){ const n=prompt("Новое название набора",s.name); if(n&&n.trim()){ s.name=n.trim(); save(); renderSets(); } }
+    else if(a==="update"){ if(!state.markers.length){ toast("Текущий список пуст"); return; }
+      if(confirm(`Заменить содержимое «${s.name}» текущим списком (${state.markers.length} шт.)?`)){ s.markers=deep(state.markers).map(({code,name})=>({code,name})); save(); renderSets(); toast("Набор обновлён"); } }
+  };
+  $("#btnSaveSet").onclick=()=>{
+    const name=$("#setName").value.trim(); if(!name){ toast("Введите название набора"); $("#setName").focus(); return; }
+    if(!state.markers.length){ toast("Список маркеров пуст"); return; }
+    state.sets.push({id:uid(),name,markers:state.markers.map(({code,name})=>({code,name}))}); $("#setName").value=""; save(); renderSets(); toast("Набор сохранён");
+  };
+  $("#setName").onkeydown=e=>{ if(e.key==="Enter") $("#btnSaveSet").click(); };
+  $("#btnNewSet").onclick=()=>modal({title:"Новый набор из кодов",
+    html:`<div class="f"><label>Название набора</label><input type="text" id="nsName" placeholder="Напр. NuSoulra 168"></div>
+      <div class="f"><label>Подпись для всех маркеров (необязательно)</label><input type="text" id="nsLabel" placeholder="Напр. NuSoulra"></div>
+      <div class="f"><label>Коды — через запятую, с новой строки или диапазоном</label><textarea id="nsCodes" rows="6" placeholder="Y01-Y17, F01-F37&#10;600-650"></textarea></div><p class="hint" id="nsHint"></p>`,
+    onOpen:b=>{ const h=()=>$("#nsHint",b).innerHTML=`Кодов: <b>${expandCodes($("#nsCodes",b).value).length}</b>`; $("#nsCodes",b).oninput=h; h(); $("#nsName",b).focus(); },
+    buttons:[{label:"Отмена"},{label:"Создать",primary:true,onClick:()=>{
+      const name=$("#nsName").value.trim(), codes=expandCodes($("#nsCodes").value), lbl=$("#nsLabel").value.trim();
+      if(!name||!codes.length){ toast("Нужны название и коды"); return false; }
+      state.sets.push({id:uid(),name,markers:codes.map(code=>({code,name:lbl}))}); save(); renderSets(); toast(`Набор «${name}»: ${codes.length} кодов`); }}]});
+  $("#btnSetsExport").onclick=()=>{ if(!state.sets.length){ toast("Нет своих наборов"); return; }
+    download(new Blob([JSON.stringify({type:"palette-sets",sets:state.sets},null,1)],{type:"application/json"}),"мои-наборы.json"); };
+  $("#btnSetsImport").onclick=async()=>{ const f=await pickFile(".json,application/json"); if(!f) return;
+    try{ const d=JSON.parse(await readAs(f,"text")), sets=d.sets||(Array.isArray(d)?d:null); if(!sets) throw 0;
+      sets.forEach(s=>state.sets.push({id:uid(),name:s.name||"Набор",markers:(s.markers||[]).map(m=>({code:m.code||"",name:m.name||""}))}));
+      save(); renderSets(); toast(`Импортировано наборов: ${sets.length}`); }catch(e){ toast("Не удалось прочитать файл наборов"); } };
+}
+
+/* =========================================================
+   Превью
+   ========================================================= */
+let lastPages=[], lastInfo=null, renderQueued=false;
+function layoutCurrent(opts={}){
+  return state.mode==="tracker" ? layoutTracker(state.tracker,state.print,opts) : layoutStrips(state.design,state.markers,state.print,opts);
+}
+function sheetSize(){ const L=layoutCurrent(); return {w:L.pages[0].w,h:L.pages[0].h}; }
+function render(){ if(renderQueued) return; renderQueued=true; requestAnimationFrame(()=>{ renderQueued=false; renderNow(); }); }
+function renderNow(){
+  const L=layoutCurrent(); lastPages=L.pages; lastInfo=L.info;
+  const pxW=p=>p.w*PX_PER_MM*state.zoom;
+  $("#sheetWrap").innerHTML=L.pages.map((p,i)=>`<div class="sheet-box">${L.pages.length>1||p.cap?`<div class="sheet-cap">${p.cap||`Страница ${i+1} из ${L.pages.length}`}</div>`:""}<div class="sheet" data-p="${i}">${pageSvg(p,{preview:true,pxW:pxW(p)})}</div></div>`).join("");
+  $("#warns").innerHTML=L.warn.map(w=>`<div class="warn">${esc(w)}</div>`).join("");
+  const W=L.pages[0].w, H=L.pages[0].h, size=`${+W.toFixed(1)}×${+H.toFixed(1)} мм`;
+  $("#pageInfo").textContent = state.mode==="tracker"
+    ? (L.info.divider?`Разделитель · 2 стороны · ${size}`:`Трекер · ${size}${L.info.units>1?` · ${L.info.units} стр. на листе`:""}`)
+    : (state.markers.length?`${L.pages.length} стр. · ${L.info.perPage} на стр. · ${state.markers.length} маркеров · ${size}`:size);
+  $("#zoomVal").textContent=Math.round(state.zoom*100)+"%";
+  refreshForms();
+}
+function applyZoom(){
+  $("#zoomVal").textContent=Math.round(state.zoom*100)+"%";
+  $$("#sheetWrap .sheet").forEach(el=>{ const p=lastPages[+el.dataset.p], svg=$("svg",el); if(!p||!svg) return;
+    const w=p.w*PX_PER_MM*state.zoom; svg.setAttribute("width",w); svg.setAttribute("height",w*p.h/p.w); });
+}
+function fitWidth(){
+  const main=$("#main"); if(!main.clientWidth||!lastPages[0]) return;
+  const avail=main.clientWidth-(innerWidth<860?20:60);
+  state.zoom=clamp(avail/(lastPages[0].w*PX_PER_MM),0.15,1.6); applyZoom();
+}
+function initPreviewEvents(){
+  $("#zoomIn").onclick=()=>{ state.zoom=Math.min(3,+(state.zoom+0.1).toFixed(2)); applyZoom(); };
+  $("#zoomOut").onclick=()=>{ state.zoom=Math.max(0.15,+(state.zoom-0.1).toFixed(2)); applyZoom(); };
+  $("#zoomVal").onclick=()=>{ state.zoom=1; applyZoom(); };
+  $("#zoomFit").onclick=fitWidth;
+  const wrap=$("#sheetWrap");
+  wrap.addEventListener("mousemove",e=>{ const s=e.target.closest(".sheet"); if(!s){ $("#cursorMm").textContent=""; return; }
+    const p=lastPages[+s.dataset.p], r=s.getBoundingClientRect();
+    $("#cursorMm").textContent=`x ${((e.clientX-r.left)/r.width*p.w).toFixed(1)} · y ${((e.clientY-r.top)/r.height*p.h).toFixed(1)} мм`; });
+  wrap.addEventListener("mouseleave",()=>$("#cursorMm").textContent="");
+  // клик по подписи на листе — правка на месте
+  wrap.addEventListener("click",e=>{
+    const t=e.target.closest("text[data-i]"); if(!t) return;
+    const m=state.markers[+t.dataset.i], f=t.dataset.f; if(!m) return;
+    const r=t.getBoundingClientRect(), inp=document.createElement("input");
+    inp.className="inline-edit"; inp.value=m[f]||""; inp.style.left=r.left-6+"px"; inp.style.top=r.top-6+"px"; inp.style.width=Math.max(120,r.width+40)+"px";
+    document.body.appendChild(inp); inp.focus(); inp.select();
+    let done=false; const commit=ok=>{ if(done) return; done=true; if(ok){ m[f]=inp.value.trim(); save(); renderMarkers(); render(); } inp.remove(); };
+    inp.onblur=()=>commit(true); inp.onkeydown=ev=>{ if(ev.key==="Enter") commit(true); if(ev.key==="Escape") commit(false); };
+  });
+  $("#main").addEventListener("wheel",e=>{ if(!(e.ctrlKey||e.metaKey)) return; e.preventDefault();
+    state.zoom=clamp(state.zoom*(e.deltaY<0?1.1:1/1.1),0.15,3); applyZoom(); },{passive:false});
+}
+
+/* =========================================================
+   Печать и PDF
+   ========================================================= */
+const calOf=()=>({sx:state.print.sx/100,sy:state.print.sy/100,ox:state.print.ox,oy:state.print.oy});
+function hasCal(){ const p=state.print; return p.sx!==100||p.sy!==100||p.ox!==0||p.oy!==0; }
+function buildPrint(pages,applyCal=true){
+  const W=pages[0].w, H=pages[0].h;
+  $("#pageStyle").textContent=`@page{size:${W}mm ${H}mm;margin:0}`;
+  const cal=applyCal&&hasCal()?calOf():null;
+  // высота блока на 0.2 мм меньше листа — иначе браузер иногда добавляет пустую страницу
+  $("#printRoot").innerHTML=pages.map(p=>`<div class="print-page" style="width:${p.w}mm;height:${p.h-0.2}mm">${pageSvg(p,{cal})}</div>`).join("");
+}
+async function ensureReady(pages){
+  try{ await document.fonts.ready; }catch(e){}
+  await waitImages(pages.flatMap(p=>collectImages(p.items)));
+}
+async function doPrint(pages,{skipTips}={}){
+  const go=async()=>{ await ensureReady(pages); buildPrint(pages); setTimeout(()=>window.print(),60); };
+  if(skipTips||state.print.tipsSeen) return go();
+  modal({title:"Перед печатью",html:`<p style="margin-top:0">Чтобы размеры совпали до миллиметра, в окне печати выберите:</p>
+    <ul><li>Масштаб: <b>100%</b> (не «По размеру страницы»)</li><li>Поля: <b>Нет</b> (или «Без полей»)</li><li>Колонтитулы: <b>выключены</b></li>
+    <li>Размер бумаги: <b>${pages[0].w}×${pages[0].h} мм</b>${state.mode==="tracker"&&state.tracker.pageType==="divider"?" · двусторонняя печать":""}</li></ul>
+    <p class="hint">С телефона надёжнее кнопка <b>PDF</b>. Совет показывается один раз.</p>`,
+    buttons:[{label:"Отмена"},{label:"Печатать",primary:true,onClick:()=>{ state.print.tipsSeen=true; save(); go(); }}]});
+}
+async function doPdf(pages,name,applyCal){
+  toast("Готовим PDF…");
+  await ensureReady(pages);
+  const cal=applyCal&&hasCal()?calOf():null, out=[];
+  for(const p of pages){ out.push({cv:pageCanvas(p,state.print.dpi,cal),w:p.w,h:p.h}); await new Promise(r=>setTimeout(r)); }
+  download(canvasesToPdf(out),name);
+  toast(`PDF готов · ${out.length} стр. · ${pages[0].w}×${pages[0].h} мм`);
+}
+function currentPagesForOutput(){ return layoutCurrent({showSafe:false}).pages; }
+function printCalibration(pdf){
+  const s=sheetSize(), L=layoutCalibration(s.w,s.h);
+  if(pdf) doPdf(L.pages,"тестовая-страница.pdf",false); else { buildPrint(L.pages,false); setTimeout(()=>window.print(),60); }
+}
+window.addEventListener("beforeprint",()=>{ if(!$("#printRoot").innerHTML) buildPrint(currentPagesForOutput()); });
+window.addEventListener("afterprint",()=>{ setTimeout(()=>{ $("#printRoot").innerHTML=""; },300); });
+
+/* =========================================================
+   Обмен: ссылка, файл проекта
+   ========================================================= */
+function payload(){ return {v:2,mode:state.mode,markers:state.markers.map(({code,name})=>({code,name})),sets:state.sets,design:state.design,tracker:state.tracker}; }
+const b64u={enc:u8=>{ let s=""; u8.forEach(b=>s+=String.fromCharCode(b)); return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); },
+  dec:s=>{ s=s.replace(/-/g,"+").replace(/_/g,"/"); const bin=atob(s); return Uint8Array.from(bin,c=>c.charCodeAt(0)); }};
+async function encodeShare(obj){
+  const json=new TextEncoder().encode(JSON.stringify(obj));
+  if(window.CompressionStream){ const buf=await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer(); return "z"+b64u.enc(new Uint8Array(buf)); }
+  return b64u.enc(json);
+}
+async function decodeShare(str){
+  str=str.trim().replace(/^.*#p=/,"");
+  if(str[0]==="z" && window.DecompressionStream){
+    const buf=await new Response(new Blob([b64u.dec(str.slice(1))]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer();
+    return JSON.parse(new TextDecoder().decode(buf));
+  }
+  try{ return JSON.parse(new TextDecoder().decode(b64u.dec(str))); }catch(e){ return JSON.parse(decodeURIComponent(escape(atob(str)))); } // старый формат
+}
+function importData(o){
+  if(!o||typeof o!=="object") throw new Error("bad");
+  if(o.design) state.design=migrateDesign(o.design);
+  if(o.tracker) state.tracker=migrateTracker(o.tracker,o.v);
+  if(o.markers) state.markers=o.markers.map(m=>({id:uid(),code:m.code||"",name:m.name||""}));
+  if(o.sets) state.sets=o.sets.map(s=>({id:uid(),name:s.name,markers:s.markers||[]}));
+  save(); renderMarkers(); renderSets(); refreshForms(); setMode(o.mode||state.mode);
+}
+async function share(){
+  const p=payload();
+  const big=[p.design.bgImage,p.tracker.divImage].some(s=>s&&s.startsWith("data:image/")&&!s.startsWith("data:image/svg")&&s.length>2000);
+  if(big){ p.design={...p.design,bgImage:p.design.bgImage.startsWith("data:image/svg")?p.design.bgImage:""}; p.tracker={...p.tracker,divImage:""}; }
+  const link=location.href.split("#")[0]+"#p="+await encodeShare(p);
+  try{ await navigator.clipboard.writeText(link); }catch(e){}
+  modal({title:"Поделиться",html:`<p class="hint" style="margin-top:0">Ссылка открывает ваш список и все настройки как есть.${big?" <b>Свои картинки в ссылку не входят</b> — для них сохраните проект файлом.":""} ${link.length>8000?"Ссылка длинная — некоторые мессенджеры её обрежут, надёжнее файл.":""} Уже скопирована в буфер.</p><textarea readonly>${esc(link)}</textarea>`,
+    onOpen:b=>{ const t=$("textarea",b); t.focus(); t.select(); }});
+}
+function openDrawer(){ $("#dataDrawer").classList.add("show"); $("#drawerBg").classList.add("show"); }
+function closeDrawer(){ $("#dataDrawer").classList.remove("show"); $("#drawerBg").classList.remove("show"); }
+function initDataEvents(){
+  $("#btnShare").onclick=share; $("#btnData").onclick=openDrawer;
+  $("#drawerClose").onclick=closeDrawer; $("#drawerBg").onclick=closeDrawer;
+  $("#drShare").onclick=()=>{ closeDrawer(); share(); };
+  $("#drExport").onclick=()=>{ download(new Blob([JSON.stringify(payload(),null,1)],{type:"application/json"}),"palette-проект.json"); toast("Проект сохранён в файл"); };
+  $("#drOpen").onclick=async()=>{ const f=await pickFile(".json,application/json"); if(!f) return;
+    try{ importData(JSON.parse(await readAs(f,"text"))); closeDrawer(); toast("Проект открыт"); }catch(e){ toast("Не удалось прочитать файл"); } };
+  $("#drawerImport").onclick=async()=>{ const txt=$("#drawerText").value.trim(); if(!txt){ toast("Вставьте данные"); return; }
+    try{ importData(txt.startsWith("{")?JSON.parse(txt):await decodeShare(txt)); $("#drawerText").value=""; closeDrawer(); toast("Импортировано"); }
+    catch(e){ toast("Не удалось разобрать данные"); } };
+}
+
+/* =========================================================
+   Приветствие
+   ========================================================= */
+function initWelcome(){
+  const demo=["601 Sky blue","605 Red","612 Pink","615 Bright yellow","622 Pine green","635 Purple","644 Clay colour","651 Violet","660 Heartbeat pink","673 Klein blue","684 Apricot yellow","691 Coral powder","703 Ivory orange","723 Sakura","744 Lavender","767 Cloud blue","777 Pure yellow","783 Orange red","802 Mango yellow","821 Ice blue","836 Soft pink","854 Fluorescent pink"]
+    .map(s=>{ const [code,...n]=s.split(" "); return {code,name:n.join(" ")}; });
+  const W=t=>{ const L=t(), p=L.pages[0]; return pageSvg(p,{pxW:200}); };
+  const fill=()=>{
+    $("#wPrevStrips").innerHTML=W(()=>layoutStrips({...DEFAULT_DESIGN,showGuides:false},demo,{...DEFAULT_PRINT,showSafe:false}));
+    $("#wPrevTracker").innerHTML=W(()=>layoutTracker({...DEFAULT_TRACKER,showGuides:false},{...DEFAULT_PRINT,showSafe:false}));
+  };
+  fill(); document.fonts?.ready.then(()=>{ clearMetrics(); fill(); });
+  $$(".wcard").forEach(b=>b.onclick=()=>{ hideWelcome(); setMode(b.dataset.choose); });
+  $("#welcomeSkip").onclick=hideWelcome;
+  $("#btnHome").onclick=()=>$("#welcome").classList.add("show");
+  let seen=false; try{ seen=!!localStorage.getItem("palette_seen"); }catch(e){}
+  if(!seen) $("#welcome").classList.add("show");
+}
+function hideWelcome(){ $("#welcome").classList.remove("show"); try{localStorage.setItem("palette_seen","1");}catch(e){} requestAnimationFrame(fitWidth); }
+
+/* =========================================================
+   Запуск
+   ========================================================= */
+async function boot(){
+  let theme="light"; try{ theme=localStorage.getItem("palette_theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"); }catch(e){}
+  applyTheme(theme);
   load();
   if(location.hash.startsWith("#p=")){
-    try{ importData(decodeShare(location.hash.slice(3))); toast("Палитра загружена из ссылки");
-      history.replaceState(null,"",location.pathname);
-    }catch(e){}
+    try{ importData(await decodeShare(location.hash.slice(3))); toast("Палитра загружена из ссылки"); try{localStorage.setItem("palette_seen","1");}catch(e){} }catch(e){ toast("Ссылка повреждена"); }
+    history.replaceState(null,"",location.pathname);
   }
-  renderBgPresets();
-  bindDesign();
-  bindTracker();
-  initEvents();
+  onImageReady=render;
+  buildStripsPanes(); buildTrackerPanes();
+  initMarkerEvents(); initSetEvents(); initPreviewEvents(); initDataEvents();
+  renderMarkers(); renderSets(); renderPresets();
+  $$("#modeSeg button").forEach(b=>b.onclick=()=>setMode(b.dataset.v));
+  $("#btnTheme").onclick=()=>applyTheme(document.body.dataset.theme==="dark"?"light":"dark");
+  $("#btnPrint").onclick=()=>doPrint(currentPagesForOutput());
+  $("#btnPdf").onclick=()=>{ if(state.mode==="strips"&&!state.markers.length){ toast("Сначала добавьте маркеры"); return; }
+    doPdf(currentPagesForOutput(),state.mode==="tracker"?(state.tracker.pageType==="divider"?"разделитель.pdf":"трекер.pdf"):"выкраска.pdf",state.print.calPdf); };
+  $("#modalBg").onclick=e=>{ if(e.target===$("#modalBg")) closeModal(); };
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeDrawer(); closeModal(); } });
+  if(matchMedia("(max-width:860px)").matches) document.body.dataset.mview=state.tab[state.mode]||"markers";
   setMode(state.mode);
-  setPageType(state.tracker.pageType);
-  renderMarkers(); renderSets(); renderSheet();
-  if(matchMedia("(max-width:800px)").matches) setMView("markers");
   initWelcome();
-  fitWidth();
+  addEventListener("resize",()=>{ clearTimeout(boot._r); boot._r=setTimeout(fitWidth,150); });
+  // веб-шрифты влияют на ширину текста — после загрузки пересчитываем
+  document.fonts?.ready.then(()=>{ clearMetrics(); render(); requestAnimationFrame(fitWidth); });
+  [state.design.font,state.tracker.font,state.tracker.titleFont,state.tracker.fieldFont].forEach(loadFont);
 }
 boot();

@@ -2,570 +2,129 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Palette Creator by darya.acryllove</title>
-<meta name="description" content="Palette Creator — конструктор разлиновки для выкраски акриловых маркеров: ленточки, наборы, печать и обмен палитрами.">
+<meta name="description" content="Palette Creator — конструктор выкрасок акриловых маркеров и трекеров раскрасок: точная печать в миллиметрах, готовые наборы маркеров, PDF.">
 <meta property="og:title" content="Palette Creator by darya.acryllove">
-<meta property="og:description" content="Конструктор разлиновки для выкраски акриловых маркеров">
+<meta property="og:description" content="Конструктор выкрасок акриловых маркеров с точной печатью">
+<meta name="theme-color" content="#f7f2ee">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Bad+Script&family=Caveat:wght@400;700&family=Comfortaa:wght@400;700&family=Cormorant:wght@400;700&family=Dancing+Script:wght@400;700&family=Great+Vibes&family=Inter:wght@400;700&family=Jost:wght@400;700&family=Lora:wght@400;700&family=Manrope:wght@400;700&family=Marck+Script&family=Montserrat:wght@400;500;700&family=Neucha&family=Nunito:wght@400;700&family=Pacifico&family=Playfair+Display:wght@400;700&family=Rubik:wght@400;700&family=Unbounded:wght@400;700&display=swap">
-<style id="pageStyle">@page{size:A4 portrait;margin:0}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Bad+Script&family=Caveat:wght@400;700&family=Comfortaa:wght@400;700&family=Cormorant:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@400;700&family=Great+Vibes&family=Inter:ital,wght@0,400;0,700;1,400&family=Jost:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,700;1,400&family=Manrope:wght@400;500;600;700;800&family=Marck+Script&family=Montserrat:ital,wght@0,400;0,500;0,700;1,400&family=Neucha&family=Nunito:ital,wght@0,400;0,700;1,400&family=Pacifico&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Rubik:ital,wght@0,400;0,700;1,400&family=Unbounded:wght@400;700&display=swap">
+<style id="pageStyle">@page{size:210mm 297mm;margin:0}</style>
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+
+<!-- ============ приветствие ============ -->
 <div id="welcome" class="welcome">
-  <div class="blobs" aria-hidden="true">
-    <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span>
-  </div>
-  <div class="floaties" id="floaties" aria-hidden="true"></div>
   <div class="welcome-inner">
     <div class="welcome-head">
-      <div class="welcome-logo">Твоя <span class="accent">палитра</span><br>маркеров</div>
-      <div class="welcome-tag">Конструктор выкрасок и трекеров для акриловых маркеров</div>
+      <div class="welcome-kicker">Palette Creator</div>
+      <h1 class="welcome-logo">Твоя <span class="accent">палитра</span> маркеров</h1>
+      <p class="welcome-tag">Выкраски и трекеры для акриловых маркеров — с точной печатью до миллиметра</p>
       <a class="welcome-by" href="https://www.instagram.com/darya.acryllove/" target="_blank" rel="noopener">by darya.acryllove</a>
     </div>
     <div class="welcome-cards">
       <button class="wcard" data-choose="strips">
-        <span class="wcard-img" data-img="1560806863-6ccdecaf1dc5"></span>
+        <span class="wcard-img" id="wPrevStrips"></span>
         <span class="wcard-body">
-          <span class="wcard-emoji">🎴</span>
           <span class="wcard-title">Выкраска маркеров</span>
-          <span class="wcard-desc">Ленточки-полоски с кодами, кружками и отверстием под кольцо. Наборы, печать, PDF.</span>
+          <span class="wcard-desc">Ленточки с кодами, кружками под выкрас и отверстием под кольцо. Готовые наборы GuangNa и свои.</span>
           <span class="wcard-go">Создать выкраску →</span>
         </span>
       </button>
       <button class="wcard" data-choose="tracker">
-        <span class="wcard-img" data-img="1759984782139-2c747fc588be"></span>
+        <span class="wcard-img" id="wPrevTracker"></span>
         <span class="wcard-body">
-          <span class="wcard-emoji">📋</span>
           <span class="wcard-title">Трекер раскрасок</span>
-          <span class="wcard-desc">Лист A4/A5 с шапкой, клетками и отверстиями под дырокол. Несколько на листе.</span>
+          <span class="wcard-desc">Лист с шапкой, клетками и отверстиями под дырокол. A4, A5, 2 или 4 страницы на листе, разделители.</span>
           <span class="wcard-go">Создать трекер →</span>
         </span>
       </button>
     </div>
-    <button class="welcome-skip" id="welcomeSkip">Пропустить</button>
+    <button class="welcome-skip" id="welcomeSkip">Продолжить, где остановилась →</button>
   </div>
 </div>
-<header>
-  <h1><button class="home-btn" id="btnHome" title="На главную">🎨</button> Palette Creator</h1>
-  <a class="byline" href="https://www.instagram.com/darya.acryllove/" target="_blank" rel="noopener">by darya.acryllove</a>
+
+<!-- ============ шапка ============ -->
+<header class="topbar">
+  <button class="brand" id="btnHome" title="На главную">
+    <span class="brand-mark">🎨</span>
+    <span class="brand-text">Palette Creator<small>by darya.acryllove</small></span>
+  </button>
+  <div class="seg mode-seg" id="modeSeg">
+    <button data-v="strips">Выкраска</button>
+    <button data-v="tracker">Трекер</button>
+  </div>
   <span class="spacer"></span>
-  <button class="btn small ghost" id="btnTheme" title="Тема">🌙</button>
-  <button class="btn small" id="btnShare">Поделиться</button>
-  <button class="btn small" id="btnExport">JSON</button>
-  <button class="btn small" id="btnImport">Импорт</button>
-  <button class="btn small" id="btnPrint">Печать</button>
-  <button class="btn small primary" id="btnPdf" title="Печать без полей и колонтитулов — удобно с телефона">PDF</button>
+  <button class="icon-btn" id="btnTheme" title="Светлая / тёмная тема">◐</button>
+  <button class="btn ghost hide-sm" id="btnShare">Поделиться</button>
+  <button class="btn ghost hide-sm" id="btnData">Файл</button>
+  <button class="btn" id="btnPrint" title="Печать через браузер (Ctrl+P)">Печать</button>
+  <button class="btn primary" id="btnPdf" title="PDF точно в размер листа — удобно с телефона">PDF</button>
 </header>
 
 <div class="layout">
-  <aside class="sidebar">
-    <div class="seg" id="modeSeg" style="margin-bottom:12px">
-      <button data-v="strips">🎴 Разлиновка</button>
-      <button data-v="tracker">📋 Трекер</button>
-    </div>
-    <div class="tabs">
-      <button data-tab="markers" class="active">Маркеры</button>
-      <button data-tab="sets">Наборы</button>
-      <button data-tab="design">Дизайн</button>
-    </div>
-
-    <!-- MARKERS -->
-    <div class="tabpane" data-pane="markers">
-      <div class="card">
-        <h3>Добавить маркер</h3>
-        <div class="mk-add">
-          <input type="text" class="code" id="addCode" placeholder="Код">
-          <input type="text" id="addName" placeholder="Название">
-        </div>
-        <button class="btn primary wide" id="btnAdd">Добавить</button>
-        <div class="hint">Enter — тоже добавляет. Название остаётся — удобно набивать серию кодов подряд.</div>
-      </div>
-      <div class="card">
-        <h3>Добавить набор маркеров</h3>
-        <div class="field">
-          <input type="text" id="bulkName" placeholder="Название для всех (напр. Languo)">
-        </div>
-        <div class="field">
-          <textarea id="bulkCodes" rows="3" placeholder="Коды: B701, B702, G 202 или диапазон B701-750" style="resize:vertical"></textarea>
-        </div>
-        <button class="btn primary wide" id="btnBulk">Добавить все</button>
-        <div class="hint" id="bulkHint">Разделители: запятая или новая строка (коды с пробелами вроде «G 202» не разрезаются). Диапазоны: <b>701-750</b>, <b>B701-750</b>, <b>001-050</b> (нули сохраняются).</div>
-      </div>
-      <div class="card">
-        <h3>Список <span class="count" id="mkCount"></span>
-          <button class="btn danger small" id="btnClearMarkers" style="float:right">очистить</button>
-        </h3>
-        <div class="mklist" id="mklist"></div>
-      </div>
-    </div>
-
-    <!-- SETS -->
-    <div class="tabpane" data-pane="sets" style="display:none">
-      <div class="card">
-        <h3>Сохранить набор</h3>
-        <div class="field">
-          <input type="text" id="setName" placeholder="Производитель (напр. Grasp)">
-        </div>
-        <button class="btn primary wide" id="btnSaveSet">Сохранить текущий список</button>
-        <div class="hint">«Применить» — заменить список, «＋» — дописать к текущему.</div>
-      </div>
-      <div class="card">
-        <h3>Мои наборы <span class="count" id="setCount"></span></h3>
-        <div id="setlist"></div>
-      </div>
-    </div>
-
-    <!-- DESIGN -->
-    <div class="tabpane" data-pane="design" style="display:none">
-     <div id="stripsDesign">
-      <div class="card">
-        <h3>Лист</h3>
-        <div class="row">
-          <div class="field"><label>Формат</label>
-            <select id="dPaper">
-              <option value="A4">A4</option><option value="A5">A5</option><option value="Letter">Letter</option>
-            </select></div>
-          <div class="field"><label>Ориентация</label>
-            <select id="dOrient">
-              <option value="portrait">Книжная</option><option value="landscape">Альбомная</option>
-            </select></div>
-        </div>
-        <div class="row">
-          <div class="field"><label>Колонок <span class="rangeval" id="vCols"></span></label>
-            <input type="range" id="dCols" min="1" max="6" step="1"></div>
-          <div class="field"><label>Поля <span class="rangeval" id="vPad"></span></label>
-            <input type="range" id="dPad" min="0" max="30" step="1"></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Ленточка</h3>
-        <div class="row">
-          <div class="field"><label>Высота <span class="rangeval" id="vRow"></span></label>
-            <input type="range" id="dRow" min="8" max="60" step="1"></div>
-          <div class="field"><label>Ширина <span class="rangeval" id="vStripW"></span></label>
-            <input type="range" id="dStripW" min="0" max="140" step="5"></div>
-        </div>
-        <div class="row">
-          <div class="field"><label>Зазор <span class="rangeval" id="vGap"></span></label>
-            <input type="range" id="dGap" min="0" max="10" step="1"></div>
-          <div class="field"><label>Углы <span class="rangeval" id="vCorner"></span></label>
-            <input type="range" id="dCorner" min="0" max="12" step="1"></div>
-        </div>
-        <label class="toggle"><input type="checkbox" id="dBorder"> Рамка</label>
-      </div>
-
-      <div class="card">
-        <h3>Текст</h3>
-        <div class="field"><label>Шрифт</label>
-          <select id="dFont">
-            <optgroup label="Современные">
-              <option value="Montserrat, Arial, sans-serif" style="font-family:Montserrat">Montserrat</option>
-              <option value="Inter, Arial, sans-serif" style="font-family:Inter">Inter</option>
-              <option value="Manrope, Arial, sans-serif" style="font-family:Manrope">Manrope</option>
-              <option value="Rubik, Arial, sans-serif" style="font-family:Rubik">Rubik</option>
-              <option value="Jost, Arial, sans-serif" style="font-family:Jost">Jost</option>
-              <option value="Nunito, Arial, sans-serif" style="font-family:Nunito">Nunito</option>
-              <option value="Comfortaa, Arial, sans-serif" style="font-family:Comfortaa">Comfortaa</option>
-              <option value="Unbounded, Arial, sans-serif" style="font-family:Unbounded">Unbounded</option>
-            </optgroup>
-            <optgroup label="Прописные и рукописные">
-              <option value="Caveat, cursive" style="font-family:Caveat">Caveat</option>
-              <option value="'Marck Script', cursive" style="font-family:'Marck Script'">Marck Script</option>
-              <option value="'Bad Script', cursive" style="font-family:'Bad Script'">Bad Script</option>
-              <option value="Neucha, cursive" style="font-family:Neucha">Neucha</option>
-              <option value="'Dancing Script', cursive" style="font-family:'Dancing Script'">Dancing Script</option>
-              <option value="'Great Vibes', cursive" style="font-family:'Great Vibes'">Great Vibes</option>
-              <option value="Pacifico, cursive" style="font-family:Pacifico">Pacifico</option>
-              <option value="'Amatic SC', cursive" style="font-family:'Amatic SC'">Amatic SC</option>
-            </optgroup>
-            <optgroup label="С засечками">
-              <option value="'Playfair Display', Georgia, serif" style="font-family:'Playfair Display'">Playfair Display</option>
-              <option value="Cormorant, Georgia, serif" style="font-family:Cormorant">Cormorant</option>
-              <option value="Lora, Georgia, serif" style="font-family:Lora">Lora</option>
-              <option value="Georgia, serif" style="font-family:Georgia">Georgia</option>
-              <option value="'Times New Roman', serif">Times</option>
-            </optgroup>
-            <optgroup label="Классические">
-              <option value="Arial, sans-serif">Arial</option>
-              <option value="Helvetica, Arial, sans-serif">Helvetica</option>
-              <option value="'Segoe UI', sans-serif">Segoe UI</option>
-              <option value="Verdana, sans-serif">Verdana</option>
-              <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
-              <option value="'Courier New', monospace">Courier</option>
-            </optgroup>
-          </select></div>
-        <div class="field"><label>Размер <span class="rangeval" id="vFs"></span></label>
-          <input type="range" id="dFs" min="6" max="18" step="1"></div>
-        <div class="row">
-          <div class="field"><label>Сдвиг кода <span class="rangeval" id="vCodeIndent"></span></label>
-            <input type="range" id="dCodeIndent" min="0" max="120" step="1"></div>
-          <div class="field"><label>Сдвиг названия <span class="rangeval" id="vNameIndent"></span></label>
-            <input type="range" id="dNameIndent" min="0" max="120" step="1"></div>
-        </div>
-        <div class="row">
-          <div class="field"><label>Код</label>
-            <div class="chips">
-              <button class="chip" id="cCodeB" title="Жирный">B</button>
-              <button class="chip i" id="cCodeI" title="Курсив">I</button>
-            </div></div>
-          <div class="field"><label>Название</label>
-            <div class="chips">
-              <button class="chip" id="cNameB" title="Жирный">B</button>
-              <button class="chip i" id="cNameI" title="Курсив">I</button>
-            </div></div>
-        </div>
-        <div class="row" style="margin-top:8px">
-          <label class="toggle" style="margin:0"><input type="checkbox" id="dCode"> Код</label>
-          <label class="toggle" style="margin:0"><input type="checkbox" id="dNameShow"> Название</label>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Кружки и кольцо</h3>
-        <div class="row">
-          <div class="field"><label>Кол-во <span class="rangeval" id="vSpots"></span></label>
-            <input type="range" id="dSpots" min="0" max="3" step="1"></div>
-          <div class="field"><label>Размер <span class="rangeval" id="vSpotSize"></span></label>
-            <input type="range" id="dSpotSize" min="4" max="20" step="1"></div>
-        </div>
-        <div class="row">
-          <div class="field"><label>Форма</label>
-            <select id="dSpotShape">
-              <option value="circle">Круг</option><option value="square">Квадрат</option>
-            </select></div>
-          <div class="field"><label>Сдвиг <span class="rangeval" id="vSpotIndent"></span></label>
-            <input type="range" id="dSpotIndent" min="0" max="60" step="1"></div>
-        </div>
-        <label class="toggle"><input type="checkbox" id="dRing"> Отверстие под кольцо</label>
-        <div class="row">
-          <div class="field"><label>Диаметр <span class="rangeval" id="vRingSize"></span></label>
-            <input type="range" id="dRingSize" min="2" max="8" step="1"></div>
-          <div class="field"><label>Сдвиг от края <span class="rangeval" id="vRingIndent"></span></label>
-            <input type="range" id="dRingIndent" min="0" max="60" step="1"></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Полоска (линия)</h3>
-        <label class="toggle"><input type="checkbox" id="dLine"> Показать полоску</label>
-        <div class="field"><label>Сдвиг ← →</label>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input type="range" id="dLineX" min="0" max="200" step="1" style="flex:1">
-            <input type="number" id="dLineXNum" min="0" max="200" style="width:62px;text-align:center">
-            <span style="color:var(--muted);font-size:12px">мм</span>
-          </div>
-        </div>
-        <div class="field"><label>Толщина <span class="rangeval" id="vLineW"></span></label>
-          <input type="range" id="dLineW" min="1" max="4" step="1"></div>
-      </div>
-
-      <div class="card">
-        <h3>Рисунок / паттерн</h3>
-        <input type="file" id="bgFile" accept="image/*" style="display:none">
-        <label style="font-size:12px;color:var(--muted);margin-bottom:6px;display:block">Готовые паттерны</label>
-        <div class="bg-gallery" id="bgPresets"></div>
-        <div id="bgEmpty">
-          <div class="bg-drop" id="bgDrop">📷 Загрузить свою картинку</div>
-        </div>
-        <div id="bgLoaded" style="display:none">
-          <img class="bg-thumb" id="bgThumb" alt="">
-          <div class="row" style="margin-top:8px">
-            <button class="btn small ghost" id="bgReplace">Заменить</button>
-            <button class="btn small danger" id="bgClear" style="flex:0 0 auto">Убрать</button>
-          </div>
-          <div class="field" style="margin-top:10px"><label>Режим</label>
-            <div class="seg" id="bgModeSeg">
-              <button data-v="sheet">На весь лист</button>
-              <button data-v="cell">На каждую полоску</button>
-            </div>
-          </div>
-          <div class="field"><label>Вписать</label>
-            <select id="dBgFit">
-              <option value="cover">Заполнить</option>
-              <option value="contain">Вместить</option>
-              <option value="tile">Замостить (паттерн)</option>
-              <option value="stretch">Растянуть</option>
-            </select></div>
-          <div class="field"><label>Прозрачность <span class="rangeval" id="vBgOpacity"></span></label>
-            <input type="range" id="dBgOpacity" min="0" max="100" step="1"></div>
-          <div class="field"><label>Размер <span class="rangeval" id="vBgSize"></span></label>
-            <input type="range" id="dBgSize" min="5" max="300" step="1"></div>
-          <div class="field"><label>Поворот <span class="rangeval" id="vBgRotate"></span></label>
-            <input type="range" id="dBgRotate" min="0" max="360" step="5"></div>
-          <div class="row">
-            <div class="field"><label>Позиция ↔ <span class="rangeval" id="vBgPosX"></span></label>
-              <input type="range" id="dBgPosX" min="0" max="100" step="1"></div>
-            <div class="field"><label>Позиция ↕ <span class="rangeval" id="vBgPosY"></span></label>
-              <input type="range" id="dBgPosY" min="0" max="100" step="1"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Цвета</h3>
-        <div class="row">
-          <div class="field"><label>Линии</label><input type="color" id="dLineColor"></div>
-          <div class="field"><label>Текст</label><input type="color" id="dTextColor"></div>
-        </div>
-        <button class="btn ghost small wide" id="btnResetDesign" style="margin-top:8px">↺ Сбросить дизайн</button>
-      </div>
-     </div>
-
-     <div id="trackerDesign" style="display:none">
-      <div class="card">
-        <h3>Тип листа</h3>
-        <div class="seg" id="pageTypeSeg">
-          <button data-v="tracker">📋 Трекер</button>
-          <button data-v="divider">🖼 Разделитель</button>
-        </div>
-        <div class="hint">«Разделитель» — вставной лист: лицо с вашей картинкой раскраски, оборот с кружками-номерами для отметки готовых.</div>
-      </div>
-
-      <div class="card dtype-divider" id="dividerCard" style="display:none">
-        <h3>Разделитель раскрасок</h3>
-        <input type="file" id="divFile" accept="image/*" style="display:none">
-        <div id="divEmpty"><div class="bg-drop" id="divDrop">🖼 Загрузить картинку (лицевая сторона)</div></div>
-        <div id="divLoaded" style="display:none">
-          <img class="bg-thumb" id="divThumb" alt="">
-          <div class="row" style="margin-top:8px">
-            <button class="btn small ghost" id="divReplace">Заменить</button>
-            <button class="btn small danger" id="divClear" style="flex:0 0 auto">Убрать</button>
-          </div>
-        </div>
-        <div class="field" style="margin-top:8px"><label>Вписать картинку</label>
-          <select id="divFit"><option value="contain">Целиком (вместить)</option><option value="cover">Заполнить</option></select></div>
-        <div class="row">
-          <div class="field"><label>Поле сверху <span class="rangeval" id="vdivPadTop"></span></label>
-            <input type="range" id="divPadTop" min="0" max="40" step="1"></div>
-          <div class="field"><label>Поле снизу <span class="rangeval" id="vdivPadBottom"></span></label>
-            <input type="range" id="divPadBottom" min="0" max="40" step="1"></div>
-        </div>
-        <div class="row">
-          <div class="field"><label>Поле слева <span class="rangeval" id="vdivPadLeft"></span></label>
-            <input type="range" id="divPadLeft" min="0" max="40" step="1"></div>
-          <div class="field"><label>Поле справа <span class="rangeval" id="vdivPadRight"></span></label>
-            <input type="range" id="divPadRight" min="0" max="40" step="1"></div>
-        </div>
-        <div class="hint">0 со всех сторон — картинка до самых краёв (без полей). Регулируйте каждое поле отдельно.</div>
-        <div class="drawer-sep" style="margin:10px 0"></div>
-        <div class="field"><label>Заголовок оборотной стороны</label>
-          <input type="text" id="divBackTitle" placeholder="Отметь готовые раскраски"></div>
-        <div class="row">
-          <div class="field"><label>Кол-во кружков <span class="rangeval" id="vdivCount"></span></label>
-            <input type="range" id="divCount" min="1" max="200" step="1"></div>
-          <div class="field"><label>Колонок <span class="rangeval" id="vdivCols"></span></label>
-            <input type="range" id="divCols" min="2" max="14" step="1"></div>
-        </div>
-        <div class="field"><label>Размер кружка <span class="rangeval" id="vdivCircle"></span></label>
-          <input type="range" id="divCircle" min="6" max="24" step="1"></div>
-        <label class="toggle"><input type="checkbox" id="divNumbered"> Номера в кружках</label>
-        <div class="hint">Печать/PDF — 2 страницы (лицо + оборот) для двусторонней печати. Кружки нумеруются 1…N — закрашивайте по мере готовности.</div>
-      </div>
-
-      <div class="card dtype-tracker">
-        <h3>Раскладка на листе</h3>
-        <div class="field">
-          <select id="tLayout">
-            <option value="single">Одна страница</option>
-            <option value="2a5">2 × A5 на A4 — блокнот (рез по вертикали)</option>
-            <option value="2a5v">2 × A5 на A4 — рез по горизонтали</option>
-            <option value="4a6">4 × A6 на A4</option>
-          </select>
-        </div>
-        <div class="hint">💡 Печатайте <b>на A4 без полей</b> (кнопка PDF — уже без полей и колонтитулов). Разрежьте по пунктиру — получите готовые страницы A5 для блокнота. Обе страницы одинаковые: меняете настройки — меняются все.</div>
-        <label class="toggle" style="margin-top:8px"><input type="checkbox" id="tCutLine"> Линия реза (пунктир между страницами)</label>
-        <label class="toggle"><input type="checkbox" id="tGuides"> Показать границы полей (пунктир) — только на превью</label>
-      </div>
-
-      <div class="card" id="tPaperWrap">
-        <h3>Лист</h3>
-        <div class="row">
-          <div class="field"><label>Формат</label>
-            <select id="tPaper"><option value="A4">A4</option><option value="A5">A5</option><option value="Letter">Letter</option></select></div>
-          <div class="field"><label>Ориентация</label>
-            <select id="tOrient"><option value="portrait">Книжная</option><option value="landscape">Альбомная</option></select></div>
-        </div>
-        <div class="hint">Формат и ориентация действуют для раскладки «Одна страница».</div>
-      </div>
-
-      <div class="card">
-        <h3>Отступы от края</h3>
-        <div class="row">
-          <div class="field"><label>Сверху <span class="rangeval" id="vtPadTop"></span></label>
-            <input type="range" id="tPadTop" min="0" max="40" step="1"></div>
-          <div class="field"><label>Снизу <span class="rangeval" id="vtPadBottom"></span></label>
-            <input type="range" id="tPadBottom" min="0" max="40" step="1"></div>
-        </div>
-        <div class="row">
-          <div class="field"><label>Слева <span class="rangeval" id="vtPadLeft"></span></label>
-            <input type="range" id="tPadLeft" min="0" max="40" step="1"></div>
-          <div class="field"><label>Справа <span class="rangeval" id="vtPadRight"></span></label>
-            <input type="range" id="tPadRight" min="0" max="40" step="1"></div>
-        </div>
-        <div class="hint">Каждый отступ настраивается отдельно. Напр. увеличьте «Слева», чтобы освободить место под отверстия для дырокола.</div>
-      </div>
-
-      <div class="card dtype-tracker">
-        <h3>Заголовок</h3>
-        <div class="field"><input type="text" id="tTitle" placeholder="Заголовок (напр. Палитра раскраски)"></div>
-        <div class="field"><input type="text" id="tSubtitle" placeholder="Подзаголовок (необязательно)"></div>
-        <div class="field"><label>Шрифт заголовка</label>
-          <select id="tTitleFont"></select></div>
-        <div class="row">
-          <div class="field"><label>Размер <span class="rangeval" id="vtTitleSize"></span></label>
-            <input type="range" id="tTitleSize" min="14" max="48" step="1"></div>
-          <div class="field"><label>Выравнивание</label>
-            <select id="tTitleAlign"><option value="center">По центру</option><option value="left">Слева</option><option value="right">Справа</option></select></div>
-        </div>
-      </div>
-
-      <div class="card dtype-tracker">
-        <h3>Шапка</h3>
-        <label class="toggle"><input type="checkbox" id="tSticker"> Пустое место под наклейку</label>
-        <div class="row">
-          <div class="field"><label>Ширина <span class="rangeval" id="vtStickerW"></span></label>
-            <input type="range" id="tStickerW" min="20" max="190" step="1"></div>
-          <div class="field"><label>Высота <span class="rangeval" id="vtStickerH"></span></label>
-            <input type="range" id="tStickerH" min="15" max="240" step="1"></div>
-        </div>
-        <div class="field"><label>Поля (по одному на строку)</label>
-          <textarea id="tFields" rows="4" style="resize:vertical" placeholder="Тема&#10;Дата&#10;Номер страницы&#10;Заметки"></textarea></div>
-        <div class="field"><label>Шрифт полей</label>
-          <select id="tFieldFont"></select></div>
-        <div class="field"><label>Размер полей <span class="rangeval" id="vtFieldSize"></span></label>
-          <input type="range" id="tFieldSize" min="9" max="20" step="1"></div>
-      </div>
-
-      <div class="card dtype-tracker">
-        <h3>Сетка клеток</h3>
-        <div class="row">
-          <div class="field"><label>Колонок <span class="rangeval" id="vtCols"></span></label>
-            <input type="range" id="tCols" min="1" max="8" step="1"></div>
-          <div class="field"><label>Рядов <span class="rangeval" id="vtRows"></span></label>
-            <input type="range" id="tRows" min="1" max="20" step="1"></div>
-        </div>
-        <div class="row">
-          <div class="field"><label>Квадрат: ширина <span class="rangeval" id="vtSqW"></span></label>
-            <input type="range" id="tSqW" min="3" max="50" step="1"></div>
-          <div class="field"><label>Квадрат: высота <span class="rangeval" id="vtSqH"></span></label>
-            <input type="range" id="tSqH" min="3" max="50" step="1"></div>
-        </div>
-        <div class="row">
-          <div class="field"><label>Прям.: ширина <span class="rangeval" id="vtRectW"></span></label>
-            <input type="range" id="tRectW" min="4" max="90" step="1"></div>
-          <div class="field"><label>Прям.: высота <span class="rangeval" id="vtRectH"></span></label>
-            <input type="range" id="tRectH" min="3" max="50" step="1"></div>
-        </div>
-        <div class="row">
-          <div class="field"><label>Зазор рядов <span class="rangeval" id="vtBoxGap"></span></label>
-            <input type="range" id="tBoxGap" min="0" max="10" step="1"></div>
-          <div class="field"><label>Скругление <span class="rangeval" id="vtBoxR"></span></label>
-            <input type="range" id="tBoxR" min="0" max="12" step="1"></div>
-        </div>
-        <div class="hint">Ширина и высота квадрата и прямоугольника — отдельно. Высота ряда = высшего элемента, всё выровнено по низу.</div>
-      </div>
-
-      <div class="card">
-        <h3>Отверстия для дырокола</h3>
-        <label class="toggle"><input type="checkbox" id="tPunch"> Отверстия под кольца / дырокол</label>
-        <div class="row">
-          <div class="field"><label>Кол-во <span class="rangeval" id="vtPunchN"></span></label>
-            <input type="range" id="tPunchN" min="2" max="8" step="1"></div>
-          <div class="field"><label>Сторона</label>
-            <select id="tPunchSide"><option value="left">Слева</option><option value="top">Сверху</option></select></div>
-        </div>
-        <div class="row">
-          <div class="field"><label>Диаметр <span class="rangeval" id="vtPunchD"></span></label>
-            <input type="range" id="tPunchD" min="3" max="9" step="1"></div>
-          <div class="field"><label>Отступ от края <span class="rangeval" id="vtPunchM"></span></label>
-            <input type="range" id="tPunchM" min="3" max="18" step="1"></div>
-        </div>
-        <div class="field"><label>Расстояние между отверстиями</label>
-          <select id="tPunchDist">
-            <option value="custom">Своё (мм, через запятую)</option>
-            <option value="even">Равномерно по краю</option>
-          </select></div>
-        <div class="field" id="tPunchGapsWrap"><label>Промежутки, мм</label>
-          <input type="text" id="tPunchGaps" placeholder="45, 65, 45"></div>
-        <div class="hint">Промежутки между соседними отверстиями по порядку. Для 4 отверстий стандарт A5 — <b>45, 65, 45</b>. Группа центрируется по краю.</div>
-      </div>
-
-      <div class="card">
-        <h3>Оформление</h3>
-        <div class="field"><label>Основной шрифт</label>
-          <select id="tFont"></select></div>
-        <div class="row">
-          <div class="field"><label>Линии</label><input type="color" id="tLineColor"></div>
-          <div class="field"><label>Текст</label><input type="color" id="tTextColor"></div>
-          <div class="field"><label>Акцент</label><input type="color" id="tAccent"></div>
-        </div>
-        <button class="btn ghost small wide" id="btnResetTracker" style="margin-top:8px">↺ Сбросить трекер</button>
-      </div>
-     </div>
-    </div>
+  <aside class="sidebar" id="sidebar">
+    <nav class="tabs" id="tabs"></nav>
+    <div id="panes"></div>
   </aside>
 
-  <main class="main">
-    <div>
-      <div class="toolbar">
-        <div class="zoomctl">
-          <button class="btn small" id="zoomOut">−</button>
-          <span id="zoomVal">70%</span>
-          <button class="btn small" id="zoomIn">＋</button>
-          <button class="btn small" id="zoomFit">по ширине</button>
-        </div>
-        <span class="zoomctl" id="pageInfo"></span>
+  <main class="main" id="main">
+    <div class="toolbar">
+      <div class="zoomctl">
+        <button class="icon-btn sm" id="zoomOut" title="Уменьшить">−</button>
+        <button class="zoomval" id="zoomVal" title="100% — реальный размер на экране">70%</button>
+        <button class="icon-btn sm" id="zoomIn" title="Увеличить">+</button>
+        <button class="btn ghost sm" id="zoomFit">По ширине</button>
       </div>
-      <div class="sheet-wrap" id="sheetWrap"></div>
+      <span class="pageinfo" id="pageInfo"></span>
+      <span class="cursor-mm" id="cursorMm"></span>
     </div>
+    <div class="warns" id="warns"></div>
+    <div class="sheet-wrap" id="sheetWrap"></div>
   </main>
 </div>
 
-<nav class="mobile-nav" id="mobileNav">
-  <button data-mtab="markers"><span class="ico">🖊️</span>Маркеры</button>
-  <button data-mtab="sets"><span class="ico">📚</span>Наборы</button>
-  <button data-mtab="design"><span class="ico">🎨</span>Дизайн</button>
-  <button data-mtab="preview"><span class="ico">👁️</span>Превью</button>
-</nav>
+<nav class="mobile-nav" id="mobileNav"></nav>
 
-<div class="toast" id="toast"></div>
+<!-- печать: сюда собираются страницы в точном размере (на экране скрыто) -->
+<div id="printRoot" aria-hidden="true"></div>
 
+<div class="toast" id="toast" role="status"></div>
+<input type="file" id="fileInput" style="display:none">
+
+<!-- выезжающая панель: файл / импорт -->
 <div class="drawer-bg" id="drawerBg"></div>
-<aside class="drawer" id="importDrawer" aria-hidden="true">
+<aside class="drawer" id="dataDrawer" aria-hidden="true">
   <div class="drawer-head">
-    <h3>Импорт палитры</h3>
-    <button class="drawer-close" id="drawerClose" aria-label="Закрыть">✕</button>
+    <h3>Файл и обмен</h3>
+    <button class="icon-btn" id="drawerClose" aria-label="Закрыть">✕</button>
   </div>
-  <p class="hint">Вставьте JSON (из «Экспорт JSON») или строку из ссылки после <b>#p=</b>. Текущие данные будут заменены.</p>
-  <textarea id="drawerText" spellcheck="false" placeholder="Вставьте сюда JSON или код из ссылки…"></textarea>
-  <div class="drawer-actions">
-    <button class="btn primary wide" id="drawerImport">Импортировать</button>
+  <div class="drawer-links">
+    <button class="btn wide" id="drShare">🔗 Поделиться ссылкой</button>
+    <button class="btn wide" id="drExport">⇩ Сохранить проект (JSON)</button>
+    <button class="btn wide" id="drOpen">⇧ Открыть проект из файла</button>
   </div>
   <div class="drawer-sep"></div>
-  <p class="hint" style="margin-top:0">Быстрые действия:</p>
-  <div class="drawer-links">
-    <button class="btn wide" id="drawerShare">🔗 Поделиться ссылкой</button>
-    <button class="btn wide" id="drawerExport">⇩ Экспорт JSON</button>
-  </div>
+  <p class="hint">Или вставьте JSON проекта или ссылку/код после <b>#p=</b>. Текущие маркеры и настройки будут заменены.</p>
+  <textarea id="drawerText" spellcheck="false" placeholder="Вставьте JSON или ссылку…"></textarea>
+  <button class="btn primary wide" id="drawerImport" style="margin-top:10px">Импортировать</button>
 </aside>
 
+<!-- модальное окно -->
 <div class="modal-bg" id="modalBg">
-  <div class="modal">
-    <h3 id="modalTitle">Импорт</h3>
-    <p class="hint" id="modalHint" style="margin-top:0"></p>
-    <textarea id="modalText" spellcheck="false"></textarea>
-    <div class="foot">
-      <button class="btn" id="modalCancel">Закрыть</button>
-      <button class="btn primary" id="modalOk">OK</button>
-    </div>
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody"></div>
+    <div class="foot" id="modalFoot"></div>
   </div>
 </div>
 
+<script src="js/presets.js"></script>
+<script src="js/engine.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
