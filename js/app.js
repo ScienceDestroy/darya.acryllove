@@ -1,7 +1,7 @@
 "use strict";
 /* =========================================================
    Palette Creator — интерфейс.
-   Геометрия/рисование — в engine.js, готовые наборы — в presets.js.
+   Геометрия и рисование — в engine.js.
    ========================================================= */
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Math.random().toString(36).slice(2,9);
@@ -65,7 +65,7 @@ const DEFAULT_TRACKER={
 const DEFAULT_PRINT={sx:100,sy:100,ox:0,oy:0,uT:4,uR:4,uB:4,uL:4,uLink:true,showSafe:true,dpi:300,calPdf:true,tipsSeen:false};
 
 let state={mode:"strips",markers:[],sets:[],design:deep(DEFAULT_DESIGN),tracker:deep(DEFAULT_TRACKER),print:deep(DEFAULT_PRINT),
-  zoom:0.7,labelMode:"color",tab:{strips:"markers",tracker:"page"}};
+  zoom:0.7,tab:{strips:"markers",tracker:"page"}};
 
 /* ---------- сохранение ---------- */
 const LS="palette_app_v1";
@@ -73,7 +73,7 @@ let saveT, warnedQuota=false;
 function save(){ clearTimeout(saveT); saveT=setTimeout(saveNow,250); }
 function saveNow(){
   try{ localStorage.setItem(LS,JSON.stringify({v:2,markers:state.markers,sets:state.sets,design:state.design,tracker:state.tracker,
-    print:state.print,mode:state.mode,labelMode:state.labelMode,tab:state.tab})); }
+    print:state.print,mode:state.mode,tab:state.tab})); }
   catch(e){ if(!warnedQuota){ warnedQuota=true; toast("Не хватает места для сохранения — скорее всего, слишком большая картинка"); } }
 }
 // перенос старых сохранений (v1) на новые поля
@@ -105,7 +105,6 @@ function load(){
     state.tracker=migrateTracker(d.tracker||{},d.v);
     state.print={...DEFAULT_PRINT,...(d.print||{})};
     if(d.mode) state.mode=d.mode;
-    if(d.labelMode) state.labelMode=d.labelMode;
     if(d.tab) state.tab={...state.tab,...d.tab};
   }catch(e){ console.warn(e); }
 }
@@ -328,7 +327,7 @@ function buildStripsPanes(){
       <button class="btn primary wide" id="btnAdd">Добавить</button>
       <p class="hint">Enter в поле кода — добавить. Название остаётся, удобно набивать серию кодов подряд.</p></div>
     <div class="card"><h3>Добавить много кодов</h3>
-      <div class="f"><input type="text" id="bulkName" placeholder="Название для всех (напр. GuangNa)"></div>
+      <div class="f"><input type="text" id="bulkName" placeholder="Название для всех (напр. Languo)"></div>
       <div class="f"><textarea id="bulkCodes" rows="3" placeholder="B701, B702, G 202 или диапазон B701-750"></textarea></div>
       <button class="btn primary wide" id="btnBulk">Добавить все</button>
       <p class="hint" id="bulkHint"></p></div>
@@ -351,13 +350,7 @@ function buildStripsPanes(){
         <button class="btn sm" id="btnNewSet">＋ Набор из кодов</button>
         <button class="btn sm" id="btnSetsExport">⇩ Экспорт наборов</button>
         <button class="btn sm" id="btnSetsImport">⇧ Импорт</button>
-      </div></div>
-    <div class="card"><h3>Готовые наборы</h3>
-      <div class="f"><label>Подпись на ленточке</label><div class="seg" id="labelSeg">
-        <button data-v="color">Название цвета</button><button data-v="brand">Бренд</button><button data-v="none">Без подписи</button></div></div>
-      <input type="text" class="preset-search" id="presetSearch" placeholder="Поиск: 168, metallic, gloss…">
-      <div id="presetList"></div>
-      <p class="hint">Коды GuangNa сверены с поштучным каталогом дистрибьютора и списками апгрейд-наборов; количество в каждом наборе проверено. В коробке маркеры могут лежать не по номерам. Своего набора нет? Добавьте коды и сохраните в «Мои наборы».</p></div>`;
+      </div></div>`;
   /* --- Лист --- */
   buildForm(pane("strips","sheet"),[
     {title:"Формат листа",fields:[
@@ -590,7 +583,7 @@ function expandCodes(text){
 function renderMarkers(){
   const box=$("#mklist"); if(!box) return;
   $("#mkCount").textContent=state.markers.length?`· ${state.markers.length}`:"";
-  if(!state.markers.length){ box.innerHTML=`<div class="empty">Пусто. Добавьте коды выше или выберите готовый набор во вкладке «Наборы».</div>`; return; }
+  if(!state.markers.length){ box.innerHTML=`<div class="empty">Пусто. Добавьте коды выше или примените свой набор во вкладке «Наборы».</div>`; return; }
   box.innerHTML=state.markers.map((m,i)=>`<div class="mkitem" draggable="true" data-i="${i}"><span class="grip">⋮⋮</span><span class="num">${i+1}</span>
     <span class="code" data-f="code">${esc(m.code)||"—"}</span><span class="name" data-f="name">${esc(m.name)||"—"}</span><button class="x" title="Удалить">✕</button></div>`).join("");
 }
@@ -630,31 +623,13 @@ function initMarkerEvents(){
 }
 
 /* =========================================================
-   Наборы: готовые + мои
+   Наборы: мои
    ========================================================= */
-function presetMarkers(p){
-  return p.markers.map(([code,color])=>({code,name:state.labelMode==="color"?color||"":state.labelMode==="brand"?p.brand:""}));
-}
 function applyList(list,append,label){
   const copy=list.map(m=>({id:uid(),code:m.code||"",name:m.name||""}));
   if(!append && state.markers.length && !confirm(`Заменить текущий список (${state.markers.length} шт.) на «${label}»?`)) return;
   state.markers=append?state.markers.concat(copy):copy;
   save(); renderMarkers(); render(); toast(append?`Добавлено ${copy.length} в список`:`«${label}»: ${copy.length} маркеров`);
-}
-function renderPresets(){
-  const q=($("#presetSearch")?.value||"").trim().toLowerCase(), box=$("#presetList"); if(!box) return;
-  $$("#labelSeg button").forEach(b=>b.classList.toggle("on",b.dataset.v===state.labelMode));
-  const list=(typeof BUILTIN_PRESETS!=="undefined"?BUILTIN_PRESETS:[]).filter(p=>!q||(p.title+" "+p.line+" "+p.size).toLowerCase().includes(q)||p.markers.some(m=>m[0].toLowerCase()===q));
-  if(!list.length){ box.innerHTML=`<div class="empty">Ничего не найдено</div>`; return; }
-  let html="", lastBrand="";
-  list.forEach(p=>{
-    if(p.brand!==lastBrand){ html+=`<div class="brand-group">${esc(p.brand)}</div>`; lastBrand=p.brand; }
-    const first=p.markers.slice(0,6).map(m=>m[0]).join(", ");
-    html+=`<div class="pset" data-id="${p.id}"><div class="top"><span class="nm">${esc(p.title)}</span><span class="sz">${p.size}</span></div>
-      <div class="meta">${esc(p.line)} · ${esc(first)}…</div>
-      <div class="acts"><button class="btn sm primary" data-a="apply">Применить</button><button class="btn sm" data-a="append">＋ Дописать</button><button class="btn sm ghost" data-a="copy" title="Скопировать в «Мои наборы», чтобы изменить">В мои</button></div></div>`;
-  });
-  box.innerHTML=html;
 }
 function renderSets(){
   const box=$("#setlist"); if(!box) return;
@@ -666,14 +641,6 @@ function renderSets(){
     :`<div class="empty">Своих наборов пока нет. Наберите список во вкладке «Маркеры» и сохраните его здесь.</div>`;
 }
 function initSetEvents(){
-  $("#labelSeg").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; state.labelMode=b.dataset.v; save(); renderPresets(); };
-  $("#presetSearch").oninput=renderPresets;
-  $("#presetList").onclick=e=>{
-    const b=e.target.closest("[data-a]"); if(!b) return;
-    const p=BUILTIN_PRESETS.find(x=>x.id===b.closest(".pset").dataset.id);
-    if(b.dataset.a==="copy"){ state.sets.push({id:uid(),name:p.title,markers:presetMarkers(p)}); save(); renderSets(); toast(`«${p.title}» скопирован в «Мои наборы»`); return; }
-    applyList(presetMarkers(p),b.dataset.a==="append",p.title);
-  };
   $("#setlist").onclick=e=>{
     const b=e.target.closest("[data-a]"); if(!b) return;
     const s=state.sets.find(x=>x.id===b.closest(".pset").dataset.id); if(!s) return;
@@ -887,7 +854,7 @@ async function boot(){
   onImageReady=render;
   buildStripsPanes(); buildTrackerPanes();
   initMarkerEvents(); initSetEvents(); initPreviewEvents(); initDataEvents();
-  renderMarkers(); renderSets(); renderPresets();
+  renderMarkers(); renderSets();
   $$("#modeSeg button").forEach(b=>b.onclick=()=>setMode(b.dataset.v));
   $("#btnTheme").onclick=()=>applyTheme(document.body.dataset.theme==="dark"?"light":"dark");
   $("#btnPrint").onclick=()=>doPrint(currentPagesForOutput());
